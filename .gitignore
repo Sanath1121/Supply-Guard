@@ -1,0 +1,23 @@
+# Data
+data/
+*.csv
+
+# Outputs and Checkpoints
+outputs/models/
+outputs/figures/
+outputs/results/
+mlruns/
+
+# Python / Environment
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.ipynb_checkpoints/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
