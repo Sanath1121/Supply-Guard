@@ -219,12 +219,12 @@ def status_strip(status: ArtifactStatus, xai_gap: Optional[float] = None, xai_er
 
     strip_html = f"""
     <div class="sg-status-strip">
-        <span style="font-weight: 600; color: var(--text-3); margin-right: 4px;">SYSTEM STATUS:</span>
-        <span class="sg-chip {data_cls}">{escape(data_txt)}</span>
-        <span class="sg-chip {model_cls}">{escape(model_txt)}</span>
-        <span class="sg-chip {scaler_cls}">{escape(scaler_txt)}</span>
-        <span class="sg-chip {tiers_cls}">{escape(tiers_txt)}</span>
-        <span class="sg-chip {xai_cls}">{escape(xai_txt)}</span>
+        <span style="font-weight: 700; color: var(--text-3); font-size: 0.75rem; letter-spacing: 0.06em; margin-right: 4px;">SYSTEM STATUS</span>
+        <span class="sg-chip {data_cls}"><span class="sg-chip-dot"></span>{escape(data_txt)}</span>
+        <span class="sg-chip {model_cls}"><span class="sg-chip-dot"></span>{escape(model_txt)}</span>
+        <span class="sg-chip {scaler_cls}"><span class="sg-chip-dot"></span>{escape(scaler_txt)}</span>
+        <span class="sg-chip {tiers_cls}"><span class="sg-chip-dot"></span>{escape(tiers_txt)}</span>
+        <span class="sg-chip {xai_cls}"><span class="sg-chip-dot"></span>{escape(xai_txt)}</span>
     </div>
     """
     st.markdown(strip_html, unsafe_allow_html=True)

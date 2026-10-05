@@ -1,36 +1,50 @@
 /* ==========================================================================
-   SupplyGuard — Restrained Dark Analytics Design System (Linear / Vercel)
+   SupplyGuard — High-End Modern Dark Analytics Design System (Linear / Vercel)
+   Completely Offline-Safe · Zero External CDNs · WCAG AA Compliant (>= 4.5:1)
    ========================================================================== */
 
 :root {
-  /* Surfaces */
-  --bg: #0B1020;
+  /* Ultra-refined dark analytics surfaces */
+  --bg: #070B14;
+  --surface-0: #0B1020;
   --surface-1: #111A2E;
-  --surface-2: #16213A;
-  --surface-3: #1C2A48;
-  --border: rgba(148, 163, 184, 0.16);
-  --border-strong: rgba(148, 163, 184, 0.32);
+  --surface-2: #16223B;
+  --surface-3: #1E2D4E;
+  --surface-glass: rgba(17, 26, 46, 0.75);
 
-  /* Typography (WCAG AA compliant contrast >= 4.5:1 on surface-1) */
-  --text: #F1F5F9;
-  --text-2: #B6C2D4;
-  --text-3: #8EA0BA;
+  /* Precise micro-borders */
+  --border: rgba(148, 163, 184, 0.14);
+  --border-strong: rgba(148, 163, 184, 0.28);
+  --border-accent: rgba(56, 189, 248, 0.35);
 
-  /* Accent (Single sky cyan) */
+  /* High contrast accessible typography (WCAG AA >= 4.5:1 on surfaces) */
+  --text: #F8FAFC;
+  --text-2: #CBD5E1;
+  --text-3: #94A3B8;
+
+  /* Restrained single brand accent */
   --accent: #38BDF8;
-  --accent-weak: rgba(56, 189, 248, 0.14);
+  --accent-hover: #7DD3FC;
+  --accent-weak: rgba(56, 189, 248, 0.12);
+  --accent-glow: rgba(56, 189, 248, 0.25);
 
-  /* Status Colors (The ONLY red/amber/green allowed in app) */
+  /* Status Colors (Strictly reserved for severity tiers and verdicts) */
   --ok: #10B981;
-  --warn: #F59E0B;
-  --bad: #EF4444;
-  --info: #38BDF8;
-  --pending: #94A3B8;
+  --ok-glow: rgba(16, 185, 129, 0.25);
   --ok-bg: rgba(16, 185, 129, 0.12);
-  --warn-bg: rgba(245, 158, 11, 0.12);
-  --bad-bg: rgba(239, 68, 68, 0.12);
 
-  /* Series Palette for Multi-line Charts (NEUTRAL, NO status confusion) */
+  --warn: #F59E0B;
+  --warn-glow: rgba(245, 158, 11, 0.25);
+  --warn-bg: rgba(245, 158, 11, 0.12);
+
+  --bad: #EF4444;
+  --bad-glow: rgba(239, 68, 68, 0.25);
+  --bad-bg: rgba(239, 68, 68, 0.14);
+
+  --pending: #94A3B8;
+  --pending-bg: rgba(148, 163, 184, 0.12);
+
+  /* Neutral series palette for multi-line telemetry (NO red/amber/green) */
   --s-supplier: #38BDF8;      /* Sky blue */
   --s-manufacturer: #A78BFA;  /* Lavender purple */
   --s-distributor: #F472B6;   /* Rose pink */
@@ -41,41 +55,62 @@
   --r-sm: 8px;
   --r-md: 12px;
   --r-lg: 16px;
+  --r-full: 9999px;
+
   --sp-1: 4px;
   --sp-2: 8px;
   --sp-3: 12px;
   --sp-4: 16px;
   --sp-6: 24px;
   --sp-8: 32px;
-  --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.35);
+
+  /* Specular depth shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-lg: 0 10px 30px -5px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-/* Base App Container */
+/* ==========================================================================
+   Base Background & Ambient Lighting
+   ========================================================================== */
+
 [data-testid="stAppViewContainer"] {
   background-color: var(--bg) !important;
+  background-image: 
+    radial-gradient(circle at 15% 5%, rgba(56, 189, 248, 0.07) 0%, transparent 45%),
+    radial-gradient(circle at 85% 10%, rgba(167, 139, 250, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 50% 90%, rgba(16, 185, 129, 0.04) 0%, transparent 40%),
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px) !important;
+  background-size: 100% 100%, 100% 100%, 100% 100%, 36px 36px, 36px 36px !important;
   color: var(--text) !important;
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
 }
 
 #MainMenu, footer { visibility: hidden; }
 
 [data-testid="stHeader"] {
-  background: rgba(11, 16, 32, 0.8) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  background: rgba(7, 11, 20, 0.75) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
   border-bottom: 1px solid var(--border) !important;
 }
 
 .main .block-container {
-  padding-top: 1.25rem !important;
-  padding-bottom: 3rem !important;
-  max-width: 1280px !important;
+  padding-top: 1.5rem !important;
+  padding-bottom: 3.5rem !important;
+  max-width: 1320px !important;
   margin: 0 auto !important;
 }
 
-/* Sidebar Styling */
+/* ==========================================================================
+   Sidebar Navigation & Luxury Styling
+   ========================================================================== */
+
 [data-testid="stSidebar"] {
-  background-color: var(--surface-1) !important;
+  background-color: rgba(11, 16, 32, 0.95) !important;
+  backdrop-filter: blur(20px) !important;
   border-right: 1px solid var(--border) !important;
 }
 
@@ -83,137 +118,320 @@
   gap: var(--sp-3) !important;
 }
 
-/* Navigation Radios */
-div[data-testid="stRadio"] > div[role="radiogroup"] {
-  gap: var(--sp-1) !important;
-  background: var(--surface-2) !important;
-  padding: var(--sp-1) !important;
-  border-radius: var(--r-md) !important;
-  border: 1px solid var(--border) !important;
+/* Streamlit Native Navigation Links */
+[data-testid="stSidebarNav"] {
+  padding-top: var(--sp-2) !important;
 }
 
-div[data-testid="stRadio"] label {
-  background: transparent !important;
-  padding: 8px 12px !important;
+[data-testid="stSidebarNav"] ul {
+  gap: 4px !important;
+}
+
+[data-testid="stSidebarNav"] li a {
   border-radius: var(--r-sm) !important;
-  transition: all 0.15s ease !important;
-  cursor: pointer !important;
+  padding: 8px 12px !important;
+  color: var(--text-2) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
   border: 1px solid transparent !important;
 }
 
-div[data-testid="stRadio"] label:hover {
+[data-testid="stSidebarNav"] li a:hover {
   background: rgba(255, 255, 255, 0.04) !important;
+  color: var(--text) !important;
+  transform: translateX(2px);
 }
 
-div[data-testid="stRadio"] label[data-checked="true"],
-div[data-testid="stRadio"] label:has(input:checked) {
-  background: var(--surface-3) !important;
-  border: 1px solid var(--border-strong) !important;
+[data-testid="stSidebarNav"] li a[aria-current="page"] {
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.12) 0%, rgba(56, 189, 248, 0.03) 100%) !important;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
   color: var(--accent) !important;
+  font-weight: 600 !important;
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
-div[data-testid="stRadio"] label span {
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
+/* ==========================================================================
+   Modern Streamlit Input & Button Controls (Linear / Vercel Aesthetic)
+   ========================================================================== */
+
+/* Buttons */
+div.stButton > button {
+  background: linear-gradient(180deg, rgba(30, 45, 78, 0.8) 0%, rgba(17, 26, 46, 0.95) 100%) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--r-sm) !important;
+  padding: 8px 16px !important;
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+div.stButton > button:hover {
+  background: linear-gradient(180deg, rgba(40, 60, 100, 0.9) 0%, rgba(22, 34, 59, 1) 100%) !important;
+  border-color: var(--border-accent) !important;
+  color: var(--text) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+div.stButton > button:active {
+  transform: translateY(0);
+}
+
+/* Primary Action Buttons */
+div.stButton > button[kind="primary"] {
+  background: linear-gradient(180deg, #38BDF8 0%, #0284C7 100%) !important;
+  color: #070B14 !important;
+  border: 1px solid #7DD3FC !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 10px rgba(56, 189, 248, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+div.stButton > button[kind="primary"]:hover {
+  background: linear-gradient(180deg, #7DD3FC 0%, #0369A1 100%) !important;
+  box-shadow: 0 4px 18px rgba(56, 189, 248, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Segmented Tabs */
+div[data-testid="stTabs"] {
+  gap: var(--sp-2) !important;
+}
+
+div[data-testid="stTabs"] div[role="tablist"] {
+  background: var(--surface-1) !important;
+  padding: 4px !important;
+  border-radius: var(--r-md) !important;
+  border: 1px solid var(--border) !important;
+  display: inline-flex !important;
+  gap: 4px !important;
+}
+
+div[data-testid="stTabs"] button[role="tab"] {
+  background: transparent !important;
+  border: none !important;
+  border-radius: var(--r-sm) !important;
+  padding: 6px 16px !important;
+  color: var(--text-2) !important;
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+div[data-testid="stTabs"] button[role="tab"]:hover {
   color: var(--text) !important;
 }
 
-div[data-testid="stRadio"] input[type="radio"] {
-  display: none !important;
+div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+  background: var(--surface-3) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border-strong) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
 }
 
-/* Card Primitives */
+/* Slider Controls */
+div[data-testid="stSlider"] div[data-baseweb="slider"] {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+div[data-testid="stSlider"] [role="slider"] {
+  background-color: var(--accent) !important;
+  border: 2px solid #FFFFFF !important;
+  box-shadow: 0 0 10px var(--accent-glow) !important;
+}
+
+/* Expanders */
+div[data-testid="stExpander"] {
+  background: var(--surface-1) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r-md) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+div[data-testid="stExpander"] summary {
+  padding: 12px 16px !important;
+  font-weight: 600 !important;
+  color: var(--text-2) !important;
+}
+
+div[data-testid="stExpander"] summary:hover {
+  color: var(--text) !important;
+}
+
+/* ==========================================================================
+   Card Primitives (Glassmorphism & Specular Highlights)
+   ========================================================================== */
+
 .sg-card {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: var(--sp-4);
-  box-shadow: var(--shadow-1);
-  position: relative;
-  transition: border-color 0.2s ease;
+  background: linear-gradient(180deg, rgba(17, 26, 46, 0.75) 0%, rgba(11, 16, 32, 0.85) 100%) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r-md) !important;
+  padding: 18px 20px !important;
+  box-shadow: var(--shadow-md) !important;
+  position: relative !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .sg-card:hover {
-  border-color: var(--border-strong);
+  border-color: var(--border-accent) !important;
+  box-shadow: var(--shadow-lg), 0 0 20px rgba(56, 189, 248, 0.06) !important;
+  transform: translateY(-2px);
 }
 
 .sg-card-low {
-  border-left: 3px solid var(--ok);
+  border-left: 3px solid var(--ok) !important;
+}
+.sg-card-low:hover {
+  box-shadow: var(--shadow-lg), 0 0 24px var(--ok-glow) !important;
 }
 
 .sg-card-medium {
-  border-left: 3px solid var(--warn);
+  border-left: 3px solid var(--warn) !important;
+}
+.sg-card-medium:hover {
+  box-shadow: var(--shadow-lg), 0 0 24px var(--warn-glow) !important;
 }
 
 .sg-card-high {
-  border-left: 3px solid var(--bad);
+  border-left: 3px solid var(--bad) !important;
+}
+.sg-card-high:hover {
+  box-shadow: var(--shadow-lg), 0 0 24px var(--bad-glow) !important;
 }
 
-/* Status Badges */
+/* ==========================================================================
+   Status Badges & Command HUD Chips
+   ========================================================================== */
+
 .sg-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 8px;
-  border-radius: 9999px;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--r-full);
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow-sm);
 }
 
 .sg-badge-low {
   background: var(--ok-bg);
-  color: var(--ok);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
 }
 
 .sg-badge-medium {
   background: var(--warn-bg);
-  color: var(--warn);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
 }
 
 .sg-badge-high {
   background: var(--bad-bg);
-  color: var(--bad);
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #F87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
 .sg-badge-pending {
-  background: rgba(148, 163, 184, 0.12);
-  color: var(--pending);
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: var(--pending-bg);
+  color: var(--text-3);
+  border: 1px solid var(--border-strong);
 }
 
-.sg-badge-accent {
-  background: var(--accent-weak);
-  color: var(--accent);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+/* Status Strip HUD Bar */
+.sg-status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(180deg, rgba(17, 26, 46, 0.85) 0%, rgba(11, 16, 32, 0.95) 100%) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r-md) !important;
+  padding: 10px 16px !important;
+  margin-bottom: var(--sp-4) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
-/* Banner Primitives */
+.sg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.sg-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.sg-chip-ok {
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #34D399;
+}
+.sg-chip-ok .sg-chip-dot {
+  background-color: var(--ok);
+  box-shadow: 0 0 8px var(--ok-glow);
+}
+
+.sg-chip-warn {
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #FBBF24;
+}
+.sg-chip-warn .sg-chip-dot {
+  background-color: var(--warn);
+  box-shadow: 0 0 8px var(--warn-glow);
+}
+
+.sg-chip-bad {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #F87171;
+}
+.sg-chip-bad .sg-chip-dot {
+  background-color: var(--bad);
+  box-shadow: 0 0 8px var(--bad-glow);
+}
+
+/* ==========================================================================
+   Banners & Alerts
+   ========================================================================== */
+
 .sg-banner {
   border-radius: var(--r-md);
-  padding: var(--sp-3) var(--sp-4);
+  padding: 12px 18px;
   margin-bottom: var(--sp-4);
   font-size: 0.875rem;
   line-height: 1.5;
   display: flex;
   align-items: flex-start;
   gap: var(--sp-3);
+  box-shadow: var(--shadow-sm);
 }
 
 .sg-banner-warning {
-  background: var(--warn-bg);
+  background: rgba(245, 158, 11, 0.1);
   border: 1px solid rgba(245, 158, 11, 0.35);
   color: #FDE68A;
 }
 
 .sg-banner-error {
-  background: var(--bad-bg);
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
   color: #FECACA;
 }
 
@@ -224,40 +442,10 @@ div[data-testid="stRadio"] input[type="radio"] {
 }
 
 .sg-banner-sandbox {
-  background: rgba(157, 78, 221, 0.15);
-  border: 1px solid rgba(157, 78, 221, 0.4);
+  background: rgba(167, 139, 250, 0.12);
+  border: 1px solid rgba(167, 139, 250, 0.4);
   color: #E9D5FF;
 }
-
-/* Status Strip */
-.sg-status-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-2);
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 8px 12px;
-  margin-bottom: var(--sp-4);
-  font-size: 0.8125rem;
-}
-
-.sg-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 7px;
-  border-radius: var(--r-sm);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text-2);
-  font-size: 0.75rem;
-}
-
-.sg-chip-ok { border-color: rgba(16, 185, 129, 0.4); color: var(--ok); }
-.sg-chip-warn { border-color: rgba(245, 158, 11, 0.4); color: var(--warn); }
-.sg-chip-bad { border-color: rgba(239, 68, 68, 0.4); color: var(--bad); }
 
 /* Monospace numerals */
 .mono-val {
@@ -265,18 +453,18 @@ div[data-testid="stRadio"] input[type="radio"] {
   font-variant-numeric: tabular-nums;
 }
 
-/* High Tier Slow Pulse */
+/* Subtle High Tier Pulse */
 @media (prefers-reduced-motion: no-preference) {
   .pulse-high {
     animation: slow-pulse 3s infinite ease-in-out;
   }
   @keyframes slow-pulse {
-    0%, 100% { opacity: 0.9; }
-    50% { opacity: 0.4; }
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.65; transform: scale(0.98); }
   }
 }
 
-/* Reduced Motion Override */
+/* Accessibility: Reduced Motion Override */
 body.reduce-motion *,
 @media (prefers-reduced-motion: reduce) {
   * {
@@ -285,7 +473,7 @@ body.reduce-motion *,
   }
 }
 
-/* Responsive Breakpoints */
+/* Responsive Grid Breakpoints */
 @media (max-width: 1100px) {
   .sg-responsive-grid-4 {
     grid-template-columns: repeat(2, 1fr) !important;

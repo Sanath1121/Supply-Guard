@@ -1,6 +1,6 @@
 """SupplyGuard Operational Monitor View.
 
-Features single replay control, real-time TRI gauge, multi-echelon risk cards,
+Features single replay control deck, real-time TRI cockpit gauge, multi-echelon risk cards,
 interactive topology canvas with Integrated Gradients edge weights, and
 ground-truth trajectory comparisons.
 """
@@ -46,10 +46,26 @@ def render_monitor(
 
     cur_idx = st.session_state["window_idx"]
 
-    ctl_col1, ctl_col2, ctl_col3, ctl_col4 = st.columns([1, 8, 1, 2], vertical_alignment="center")
+    # Replay Control Deck UI
+    st.markdown(f"""
+    <div style="background: linear-gradient(180deg, rgba(22, 34, 59, 0.7) 0%, rgba(11, 16, 32, 0.85) 100%); 
+                border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px 18px; margin-bottom: 16px;
+                box-shadow: var(--shadow-md); backdrop-filter: blur(16px);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase;">
+                TIMELINE SCRUBBER & REPLAY CONTROLS
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <span class="sg-chip" style="font-size: 0.75rem;">Window #{cur_idx + 1} of {total_windows}</span>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    ctl_col1, ctl_col2, ctl_col3, ctl_col4 = st.columns([1, 8, 1, 2.5], vertical_alignment="center")
 
     with ctl_col1:
-        if st.button("◀", key="prev_win_btn", disabled=(cur_idx <= 0), use_container_width=True):
+        if st.button("◀", key="prev_win_btn", disabled=(cur_idx <= 0), use_container_width=True, help="Previous window (t-1)"):
             st.session_state["window_idx"] = max(0, cur_idx - 1)
             st.rerun()
 
@@ -71,13 +87,12 @@ def render_monitor(
             st.caption("Single window loaded (#1)")
 
     with ctl_col3:
-        if st.button("▶", key="next_win_btn", disabled=(cur_idx >= total_windows - 1), use_container_width=True):
+        if st.button("▶", key="next_win_btn", disabled=(cur_idx >= total_windows - 1), use_container_width=True, help="Next window (t+1)"):
             st.session_state["window_idx"] = min(total_windows - 1, cur_idx + 1)
             st.rerun()
 
     with ctl_col4:
-        if st.button("Jump to Peak TRI", key="jump_peak_btn", help="Find and jump to the test window with the highest predicted Total Risk Index", use_container_width=True):
-            # Compute TRI over all windows to find peak
+        if st.button("⚡ Jump to Peak TRI", key="jump_peak_btn", help="Find and jump to the test window with the highest predicted Total Risk Index", use_container_width=True):
             best_idx = 0
             best_val = -1.0
             with st.spinner("Finding peak risk window..."):
@@ -96,8 +111,14 @@ def render_monitor(
     seq = current_window["sequence"] # [10, 5]
     ground_truth = current_window.get("ground_truth", None)
 
-    st.caption(f"**Current Window:** #{w_id + 1} of {total_windows} | **Timestamp (t):** {escape(w_ts)}")
-    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div style="display: flex; gap: 10px; align-items: center; margin-top: -6px; margin-bottom: 14px;">
+        <span style="font-size: 0.8125rem; color: var(--text-3);">Active Window:</span>
+        <span class="sg-chip mono-val" style="color: var(--text);">#{w_id + 1}</span>
+        <span style="font-size: 0.8125rem; color: var(--text-3); margin-left: 8px;">Timestamp (t):</span>
+        <span class="sg-chip mono-val" style="color: var(--accent);">{escape(w_ts)}</span>
+    </div>
+    """, unsafe_allow_html=True)
 
     # 2. Run Forward Inference
     t0 = time.perf_counter()
@@ -111,25 +132,55 @@ def render_monitor(
     # Determine if model is scalar (PaperHybridOverall) or node-level
     is_scalar_model = (status.model_name == "paper_overall" or preds.size == 1)
 
-    # 3. Overall TRI and Echelon Cards Layout
-    top_col1, top_col2 = st.columns([1, 3], gap="medium")
+    # 3. Overall TRI Cockpit Instrument and Echelon Cards Layout
+    top_col1, top_col2 = st.columns([1.1, 2.9], gap="medium")
 
     with top_col1:
-        # TRI Gauge / Summary Card
+        # High-Fidelity TRI Cockpit Card
         tri_val = float(preds[0] if is_scalar_model else np.mean(preds))
         persistence_tri = float(np.mean(seq[-1, :4]))
         tri_delta = tri_val - persistence_tri
         tri_tier = compute_tercile_tier(tri_val, p33, p66)
+        tier_color = get_tier_color(tri_tier)
+
+        # Calculate progress percentage in [0, 1]
+        pct = min(100.0, max(0.0, tri_val * 100.0))
 
         tri_body = f"""
-        <div style="text-align: center; padding: 8px 0;">
-            <div style="margin-bottom: 8px;">{status_badge(tri_tier, tri_tier)}</div>
-            <div style="font-size: 2.25rem; font-weight: 800; color: var(--text);" class="mono-val">{tri_val:.3f}</div>
-            <div style="font-size: 0.8125rem; color: {'var(--bad)' if tri_delta > 0 else 'var(--ok)'}; margin-top: 4px;" class="mono-val">
-                {'▲ +' if tri_delta > 0 else '▼ '}{tri_delta:.3f} vs persistence
+        <div style="text-align: center; padding: 4px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 0.6875rem; font-weight: 700; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase;">
+                    COMPOSITE INDEX
+                </span>
+                {status_badge(tri_tier, tri_tier)}
             </div>
-            <div style="font-size: 0.75rem; color: var(--text-3); margin-top: 10px;">
-                Horizon: <span class="mono-val">t+{Config.HORIZON}</span> (10 min)
+
+            <div style="font-size: 2.75rem; font-weight: 800; color: #FFFFFF; line-height: 1.1; margin: 4px 0;" class="mono-val">
+                {tri_val:.3f}
+            </div>
+
+            <!-- Mini Progress Meter across Terciles -->
+            <div style="width: 100%; height: 6px; background: rgba(148, 163, 184, 0.15); border-radius: 9999px; margin: 12px 0 8px 0; overflow: hidden; position: relative;">
+                <div style="width: {pct:.1f}%; height: 100%; background: {tier_color}; border-radius: 9999px; transition: width 0.3s ease;"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; font-size: 0.6875rem; color: var(--text-3); margin-bottom: 12px;">
+                <span>0.0 (Low)</span>
+                <span>{p33:.2f}</span>
+                <span>{p66:.2f}</span>
+                <span>1.0 (High)</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid var(--border); font-size: 0.8125rem;">
+                <span style="color: var(--text-3);">Delta vs Persistence:</span>
+                <span class="mono-val" style="font-weight: 700; color: {'var(--bad)' if tri_delta > 0 else 'var(--ok)'};">
+                    {'▲ +' if tri_delta > 0 else '▼ '}{tri_delta:.3f}
+                </span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 0.75rem; color: var(--text-3);">
+                <span>Forecast Horizon:</span>
+                <span class="mono-val" style="color: var(--accent);">t+{Config.HORIZON} (10 min)</span>
             </div>
         </div>
         """
@@ -147,7 +198,8 @@ def render_monitor(
             """
             st.markdown(card("Base-Paper Model View", notice_html), unsafe_allow_html=True)
         else:
-            # 4 Echelon Cards
+            # 4 Echelon Cards with High-End Layout
+            echelon_icons = ["📦", "⚙️", "🚚", "🏪"]
             e_cols = st.columns(4, gap="small")
             for i, name in enumerate(Config.NODE_NAMES):
                 with e_cols[i]:
@@ -155,28 +207,30 @@ def render_monitor(
                     e_tier = compute_tercile_tier(r_val, p33, p66)
                     last_step = float(seq[-1, i])
                     e_delta = r_val - last_step
+                    icon = echelon_icons[i]
 
                     # Unscale raw RI if scaler available
                     if scaler_fitted and hasattr(scaler, "data_range_") and hasattr(scaler, "data_min_"):
                         raw_ri = r_val * scaler.data_range_[i] + scaler.data_min_[i]
                         raw_str = f"{raw_ri:.2f} RI"
                     else:
-                        raw_str = "Raw unscaled N/A"
+                        raw_str = "Raw units N/A"
 
                     c_body = f"""
                     <div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 1rem;">{icon}</span>
                             {status_badge(e_tier, e_tier)}
                         </div>
-                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--text);" class="mono-val">{r_val:.3f}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-3); margin-top: 2px;">{raw_str}</div>
-                        <div style="font-size: 0.75rem; color: {'var(--bad)' if e_delta > 0 else 'var(--ok)'}; margin-top: 4px;" class="mono-val">
+                        <div style="font-size: 1.625rem; font-weight: 800; color: #FFFFFF;" class="mono-val">{r_val:.3f}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-3); margin-top: 3px;" class="mono-val">{raw_str}</div>
+                        <div style="font-size: 0.75rem; color: {'var(--bad)' if e_delta > 0 else 'var(--ok)'}; margin-top: 6px; font-weight: 600;" class="mono-val">
                             {'▲ +' if e_delta > 0 else '▼ '}{e_delta:.3f} vs t
                         </div>
                     </div>
                     """
                     st.markdown(card(name, c_body, tone=e_tier), unsafe_allow_html=True)
-                    if st.button(f"Inspect {name}", key=f"inspect_node_{name}", use_container_width=True):
+                    if st.button(f"Inspect {name} →", key=f"inspect_node_{name}", use_container_width=True):
                         st.session_state["selected_node_idx"] = i
                         if "page_why" in st.session_state and st.session_state["page_why"] is not None:
                             st.switch_page(st.session_state["page_why"])
@@ -193,12 +247,11 @@ def render_monitor(
             st.info("Topology edge attribution shares require node-level target predictions and are disabled for scalar models.")
         else:
             st.markdown(
-                "<div style='font-size: 0.8125rem; color: var(--text-3); margin-bottom: 8px;'>"
-                "Edge thickness reflects real Integrated Gradients attribution share from upstream echelons. Node borders represent severity tiers."
+                "<div style='font-size: 0.8125rem; color: var(--text-3); margin-bottom: 10px;'>"
+                "Edge thickness reflects real Integrated Gradients attribution share from upstream echelons. Node pods represent severity tiers."
                 "</div>",
                 unsafe_allow_html=True
             )
-            # Compute real edge shares lazily
             model_key = f"{status.model_name}:{status.graph_mode}:{status.seed}"
             with st.spinner("Calculating attribution edge shares..."):
                 edge_shares, xai_err = compute_all_edge_shares(model_key, seq)
@@ -227,8 +280,8 @@ def render_monitor(
                 y=y_hist,
                 mode="lines+markers",
                 name=f"{name} (Observed)",
-                line=dict(color=color, width=2),
-                marker=dict(size=4),
+                line=dict(color=color, width=2.5),
+                marker=dict(size=5),
                 hovertemplate=f"<b>{name}</b><br>Step: %{{x}}<br>Scaled: %{{y:.3f}}<extra></extra>"
             ))
 
@@ -239,7 +292,7 @@ def render_monitor(
                 mode="lines+markers",
                 name=f"{name} (Forecast)",
                 line=dict(color=color, width=2, dash="dot"),
-                marker=dict(size=8, symbol="diamond"),
+                marker=dict(size=9, symbol="diamond"),
                 hovertemplate=f"<b>{name} Forecast</b><br>Step: %{{x}}<br>Score: %{{y:.3f}}<extra></extra>"
             ))
 
@@ -252,7 +305,7 @@ def render_monitor(
                     y=[gt_val],
                     mode="markers",
                     name=f"{name} (Ground Truth)",
-                    marker=dict(size=9, symbol="circle-open", line=dict(color=color, width=2)),
+                    marker=dict(size=10, symbol="circle-open", line=dict(color=color, width=2.5)),
                     hovertemplate=f"<b>{name} Actual</b><br>Actual: {gt_val:.3f}<br>Error: {err:.3f}<extra></extra>"
                 ))
 

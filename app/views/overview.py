@@ -17,6 +17,19 @@ def render_overview(status: ArtifactStatus):
         "Leak-free spatiotemporal graph forecasting and sensitivity attribution for supply chain risk resilience."
     )
 
+    # Highlights strip
+    h_col1, h_col2, h_col3, h_col4 = st.columns(4, gap="small")
+    with h_col1:
+        st.markdown(card("Architecture", "<div style='font-size:1.5rem; font-weight:800; color:#FFFFFF;' class='mono-val'>ST-GCN-LSTM</div><div style='font-size:0.75rem; color:var(--text-3); margin-top:2px;'>Hybrid Spatial-Temporal</div>"), unsafe_allow_html=True)
+    with h_col2:
+        st.markdown(card("Forecasting Horizon", "<div style='font-size:1.5rem; font-weight:800; color:var(--accent);' class='mono-val'>t+5 (10 Min)</div><div style='font-size:0.75rem; color:var(--text-3); margin-top:2px;'>2-minute cadence</div>"), unsafe_allow_html=True)
+    with h_col3:
+        st.markdown(card("Cascading Echelons", "<div style='font-size:1.5rem; font-weight:800; color:#FFFFFF;' class='mono-val'>4 Nodes</div><div style='font-size:0.75rem; color:var(--text-3); margin-top:2px;'>S → M → D → R</div>"), unsafe_allow_html=True)
+    with h_col4:
+        st.markdown(card("Data Splitting", "<div style='font-size:1.5rem; font-weight:800; color:#34D399;' class='mono-val'>80 / 10 / 10</div><div style='font-size:0.75rem; color:var(--text-3); margin-top:2px;'>Zero temporal leakage</div>"), unsafe_allow_html=True)
+
+    st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
+
     # 1. Executive Summary Card
     summary_html = """
     <p style="margin: 0; font-size: 0.9375rem; line-height: 1.6; color: var(--text-2);">
