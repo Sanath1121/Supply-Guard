@@ -21,10 +21,16 @@ class Config:
 
     # ---- Forecasting -------------------------------------------------------
     SEQ_LEN = 10             # window [t-L+1 .. t]
-    HORIZON = 1              # predict step t+HORIZON (try 5 or 10 if persistence is too strong)
+    HORIZON_MIN = 10         # prediction horizon in minutes
+    CADENCE_MIN = 2.0        # sampling cadence in minutes
+    HORIZON = 5              # predict step t+HORIZON (HORIZON_MIN / CADENCE_MIN = 10 / 2 = 5)
+    GAP_MAX_MIN = 6.0        # max allowable time gap in minutes before segment split (3x cadence)
+    FFILL_LIMIT = 5          # max consecutive null rows to forward fill
+    TIMESTAMP_FORMAT = "%m/%d/%Y %I:%M:%S %p"
+    DATE_FORMAT = TIMESTAMP_FORMAT  # alias for backward-compatibility
 
     # ---- Sampling (see dataset.py) ----------------------------------------
-    MAX_SAMPLES = 50_000     # None -> use every row
+    MAX_SAMPLES = None       # None -> use every row
     SAMPLING = "stride"      # "stride": evenly spaced over the whole span | "head": first N rows
     TRAIN_RATIO, VAL_RATIO, TEST_RATIO = 0.80, 0.10, 0.10
 

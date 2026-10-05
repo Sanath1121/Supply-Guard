@@ -16,17 +16,42 @@ def make_csv(path, n=6000, seed=0):
         s[t, 0] = 0.9 * s[t-1, 0] + rng.normal(0, 0.3)
         for k in range(1, 4):                       # each echelon follows its upstream parent with lag 1
             s[t, k] = 0.5 * s[t-1, k] + 0.5 * s[t-1, k-1] + rng.normal(0, 0.1)
-    ts = pd.date_range("2018-01-01", periods=n, freq="min")
-    df = pd.DataFrame({"Timestamp": ts[::-1][::-1], "RI_Supplier1": s[:, 0], "RI_Distributor1": s[:, 2],
-                       "RI_Manufacturer1": s[:, 1], "RI_Retailer1": s[:, 3],
-                       "Total_Cost": s.sum(1) + rng.normal(0, .1, n), "SCMstability_category": 1})
+
+    # 2-minute cadence with injected 24-hour temporal gap (> 6 min) at row 2000
+    gap_idx = 2000
+    t1 = pd.date_range("2018-01-01 00:00:00", periods=gap_idx, freq="2min")
+    t2_start = t1[-1] + pd.Timedelta(hours=24)
+    t2 = pd.date_range(t2_start, periods=n - gap_idx, freq="2min")
+    ts = list(t1) + list(t2)
+
+    df = pd.DataFrame({
+        "Timestamp": [t.strftime("%m/%d/%Y %I:%M:%S %p") for t in ts],
+        "RI_Supplier1": s[:, 0],
+        "RI_Distributor1": s[:, 2],
+        "RI_Manufacturer1": s[:, 1],
+        "RI_Retailer1": s[:, 3],
+        "Total_Cost": s.sum(1) + rng.normal(0, .1, n),
+        "SCMstability_category": 1
+    })
+
+    # Inject duplicate timestamp
+    df.loc[15, "Timestamp"] = df.loc[14, "Timestamp"]
+
+    # Inject bounded null run (<= 5 rows, forward-fillable)
+    df.loc[500:502, "RI_Distributor1"] = np.nan
+
+    # Inject extreme null run (> 5 rows, e.g. 8 rows, splits segment)
+    df.loc[4000:4007, "RI_Distributor1"] = np.nan
+
     df = df.sample(frac=1.0, random_state=1)        # shuffled on disk: loader must sort by time
     df.to_csv(path, index=False)
 
 
 def main():
     os.makedirs("data/raw", exist_ok=True); os.makedirs("outputs/models", exist_ok=True)
-    cfg = Config(); cfg.RAW_DATA_PATH = "data/raw/_synthetic.csv"; cfg.MAX_SAMPLES = 4000
+    cfg = Config()
+    cfg.RAW_DATA_PATH = "data/raw/_synthetic.csv"
+    cfg.MAX_SAMPLES = None
     make_csv(cfg.RAW_DATA_PATH)
 
     # --- graph sanity -------------------------------------------------------
@@ -37,16 +62,45 @@ def main():
     assert g["A_up"][0, 1] == 1 and g["A_up"][3].sum() == 0          # S sends to M; R has no child
     print("graph OK")
 
-    # --- dataset: chronology, leakage, shapes --------------------------------
+    # --- dataset: chronology, leakage, shapes, gap integrity ----------------
     tr, va, te, sc, info = build_datasets(cfg)
-    assert tr.sequences.shape[1:] == (10, 5) and tr.node_targets.shape[1] == 4
+
+    # Assert shapes: sequences [N, 10, 5], node_targets [N, 4]
+    for split_name, ds in [("train", tr), ("val", va), ("test", te)]:
+        assert ds.sequences.shape[1:] == (cfg.SEQ_LEN, 5), f"{split_name} seq shape mismatch"
+        assert ds.node_targets.shape[1] == 4, f"{split_name} target shape mismatch"
+
+    # Assert zero NaNs in sequences and targets
+    for split_name, ds in [("train", tr), ("val", va), ("test", te)]:
+        assert not torch.isnan(ds.sequences).any(), f"NaNs in {split_name} sequences"
+        assert not torch.isnan(ds.node_targets).any(), f"NaNs in {split_name} targets"
+
+    # Assert chronological order of partitions
     assert tr.timestamps.max() < va.timestamps.min() < va.timestamps.max() < te.timestamps.min()
     assert np.all(np.diff(tr.timestamps.astype("int64")) > 0)          # sorted despite shuffled file
-    # target is genuinely t+1: first-sample target equals row after its window
-    full = pd.read_csv(cfg.RAW_DATA_PATH, parse_dates=["Timestamp"]).sort_values("Timestamp").iloc[::2].reset_index(drop=True)   # loader strides 6000->4000 rows by 2
-    x0 = sc.transform(full[cfg.FEATURE_COLS].values)
-    assert np.allclose(tr.sequences[0].numpy(), x0[:10], atol=1e-5)
-    assert np.allclose(tr.node_targets[0].numpy(), x0[10, :4], atol=1e-5)
+    assert np.all(np.diff(va.timestamps.astype("int64")) > 0)
+    assert np.all(np.diff(te.timestamps.astype("int64")) > 0)
+
+    # Assert row loss was logged
+    assert "row_loss" in info, "Row loss accounting missing from info dict"
+    assert info["n_rows_lost_total"] > 0, "Row loss total must be greater than zero"
+
+    # Assert no window spans a gap
+    max_gap_ns = int(cfg.GAP_MAX_MIN * 60 * 1e9)
+    for split_name, ds in [("train", tr), ("val", va), ("test", te)]:
+        if ds.seq_timestamps is not None and len(ds) > 0:
+            seq_diffs = np.diff(ds.seq_timestamps.astype("int64"), axis=1)
+            assert np.all(seq_diffs <= max_gap_ns), f"Sequence window in {split_name} spans a gap > GAP_MAX_MIN"
+            tgt_diff = ds.timestamps.astype("int64") - ds.seq_timestamps[:, -1].astype("int64")
+            assert np.all(tgt_diff <= int(cfg.HORIZON * max_gap_ns)), f"Target in {split_name} spans a gap"
+
+    # Target is genuinely t+5 (index 14): first-sample target equals row 14 in clean frame
+    clean_full = pd.read_csv(cfg.RAW_DATA_PATH)
+    clean_full["dt"] = pd.to_datetime(clean_full[cfg.DATE_COL], format=cfg.TIMESTAMP_FORMAT)
+    clean_full = clean_full.sort_values("dt", kind="stable").drop_duplicates("dt", keep="first").reset_index(drop=True)
+    x0 = sc.transform(clean_full[cfg.FEATURE_COLS].values)
+    assert np.allclose(tr.sequences[0].numpy(), x0[:10], atol=1e-5), "First sequence mismatch"
+    assert np.allclose(tr.node_targets[0].numpy(), x0[14, :4], atol=1e-5), "Target at step t+5 (index 14) mismatch"
     print(f"dataset OK  train={len(tr)} val={len(va)} test={len(te)}  span={info['start']} -> {info['end']}")
 
     pers = persistence_metrics(te)
