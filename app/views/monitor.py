@@ -136,38 +136,52 @@ def render_monitor(
     top_col1, top_col2 = st.columns([1.1, 2.9], gap="medium")
 
     with top_col1:
-        # High-Fidelity TRI Cockpit Card
+        # High-Fidelity TRI Cockpit Speedometer Card
         tri_val = float(preds[0] if is_scalar_model else np.mean(preds))
         persistence_tri = float(np.mean(seq[-1, :4]))
         tri_delta = tri_val - persistence_tri
         tri_tier = compute_tercile_tier(tri_val, p33, p66)
         tier_color = get_tier_color(tri_tier)
 
-        # Calculate progress percentage in [0, 1]
-        pct = min(100.0, max(0.0, tri_val * 100.0))
+        # SVG Speedometer calculation (R=75, Arc=235.6)
+        clamped_tri = min(1.0, max(0.0, tri_val))
+        arc_offset = 235.6 * (1.0 - clamped_tri)
 
         tri_body = f"""
-        <div style="text-align: center; padding: 4px 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <div style="text-align: center; padding: 2px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <span style="font-size: 0.6875rem; font-weight: 700; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase;">
-                    COMPOSITE INDEX
+                    COMPOSITE RISK INDEX
                 </span>
                 {status_badge(tri_tier, tri_tier)}
             </div>
 
-            <div style="font-size: 2.75rem; font-weight: 800; color: #FFFFFF; line-height: 1.1; margin: 4px 0;" class="mono-val">
-                {tri_val:.3f}
-            </div>
+            <!-- Glowing Speedometer Arc Gauge -->
+            <svg viewBox="0 0 200 115" width="100%" height="auto" style="display:block; margin: 4px auto;">
+                <defs>
+                    <filter id="arcGlow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <!-- Background Arc -->
+                <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="rgba(148, 163, 184, 0.16)" stroke-width="12" stroke-linecap="round" />
+                <!-- Active Arc with Glow -->
+                <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="{tier_color}" stroke-width="12" stroke-linecap="round"
+                      stroke-dasharray="235.6" stroke-dashoffset="{arc_offset:.1f}" filter="url(#arcGlow)" />
+                <!-- Center Numeric Readout -->
+                <text x="100" y="82" fill="#FFFFFF" font-size="28" font-family="'JetBrains Mono', monospace" font-weight="800" text-anchor="middle">
+                    {tri_val:.3f}
+                </text>
+                <text x="100" y="100" fill="{tier_color}" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="0.08em">
+                    {tri_tier.upper()} SEVERITY
+                </text>
+            </svg>
 
-            <!-- Mini Progress Meter across Terciles -->
-            <div style="width: 100%; height: 6px; background: rgba(148, 163, 184, 0.15); border-radius: 9999px; margin: 12px 0 8px 0; overflow: hidden; position: relative;">
-                <div style="width: {pct:.1f}%; height: 100%; background: {tier_color}; border-radius: 9999px; transition: width 0.3s ease;"></div>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; font-size: 0.6875rem; color: var(--text-3); margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.6875rem; color: var(--text-3); margin: 2px 8px 10px 8px;">
                 <span>0.0 (Low)</span>
-                <span>{p33:.2f}</span>
-                <span>{p66:.2f}</span>
+                <span>p33: {p33:.2f}</span>
+                <span>p66: {p66:.2f}</span>
                 <span>1.0 (High)</span>
             </div>
 
@@ -178,9 +192,9 @@ def render_monitor(
                 </span>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 0.75rem; color: var(--text-3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; font-size: 0.75rem; color: var(--text-3);">
                 <span>Forecast Horizon:</span>
-                <span class="mono-val" style="color: var(--accent);">t+{Config.HORIZON} (10 min)</span>
+                <span class="mono-val" style="color: var(--accent); font-weight: 600;">t+{Config.HORIZON} (10 min)</span>
             </div>
         </div>
         """
@@ -274,13 +288,13 @@ def render_monitor(
             y_hist = seq[:, i].tolist()
             y_pred = preds[i] if not is_scalar_model else tri_val
 
-            # Historical line
+            # Historical line with smooth spline
             fig.add_trace(go.Scatter(
                 x=time_steps,
                 y=y_hist,
                 mode="lines+markers",
                 name=f"{name} (Observed)",
-                line=dict(color=color, width=2.5),
+                line=dict(color=color, width=2.5, shape="spline", smoothing=1.2),
                 marker=dict(size=5),
                 hovertemplate=f"<b>{name}</b><br>Step: %{{x}}<br>Scaled: %{{y:.3f}}<extra></extra>"
             ))
@@ -315,9 +329,22 @@ def render_monitor(
             y=seq[:, 4].tolist(),
             mode="lines",
             name="Total Cost",
-            line=dict(color=SERIES_COLORS["Total Cost"], width=1.5, dash="dash"),
+            line=dict(color=SERIES_COLORS["Total Cost"], width=1.5, dash="dash", shape="spline", smoothing=1.2),
             hovertemplate="<b>Total Cost</b><br>Step: %{x}<br>Scaled: %{y:.3f}<extra></extra>"
         ))
+
+        # Shaded forecast horizon band
+        fig.add_vrect(
+            x0=time_steps[-1],
+            x1=forecast_step,
+            fillcolor="rgba(56, 189, 248, 0.06)",
+            layer="below",
+            line_width=0,
+            annotation_text="FORECAST HORIZON (t+5)",
+            annotation_position="top left",
+            annotation_font_size=10,
+            annotation_font_color="#7DD3FC"
+        )
 
         # Layout adjustments
         fig.update_layout(
