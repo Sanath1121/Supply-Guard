@@ -28,3 +28,13 @@ These rules apply to any AI assistant or developer modifying this repository.
 - Never claim a model "beats" another or achieves superior accuracy unless `training/evaluate.py` verifies it beyond 1 standard deviation across the 5 seeds.
 - Baselines (Persistence and Ridge-AR(10)) must always be benchmarked. If persistence R² is ~0.95–0.99, state honestly whether the deep learning model adds real value.
 - Explainability outputs from Integrated Gradients represent local gradient sensitivity, **never** assert them as definitive "root cause" or causal proof.
+
+## 6. Workspace Boundary Restraint
+- Never read, modify, or archive files outside the project root (`Supply_chain_alret_system/`).
+- Historical or parent directory planning files must not be imported into the repository without explicit user authorization.
+
+## 7. Phase Completion Standard (Documentation, Commit & Push)
+At the conclusion of each phase (once verified, tested, and confirmed complete), and **strictly before beginning implementation of the next phase**:
+1. **Mandatory Markdown Report**: Author a completion report saved as `PHASE_<N>.md` at the repository root and mirrored at `docs/PHASE_<N>.md`.
+2. **Atomic Git Commit**: Stage all phase deliverables and create a semantic commit (e.g., `git commit -m "feat(phase-<N>): complete Phase <N> deliverables and report"`).
+3. **Mandatory Git Push**: Immediately execute `git push` to synchronize changes to `origin/main`. Do not begin the next phase until the report is written, committed, and pushed.
