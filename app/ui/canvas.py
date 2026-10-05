@@ -9,6 +9,7 @@ and glassmorphic node pods.
 from typing import Dict, Any, Optional, Tuple
 import html
 from app.utils.formatters import get_tier_color, compute_tercile_tier
+from app.ui.components import clean_html
 
 
 def render_topology_svg(
@@ -193,4 +194,4 @@ def render_topology_svg(
         </svg>
     </div>
     """
-    return svg_content
+    return clean_html(svg_content)

@@ -160,8 +160,8 @@ def render_export(
     )
 
     st.markdown("#### Audit Report Preview")
-    st.markdown(card("Markdown Source Preview", f"<pre style='font-size: 0.8125rem; color: var(--text-2); white-space: pre-wrap; margin: 0;'>{escape(report_md)}</pre>"), unsafe_allow_html=True)
-    st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
+    st.html(card("Markdown Source Preview", f"<pre style='font-size: 0.8125rem; color: var(--text-2); white-space: pre-wrap; margin: 0;'>{escape(report_md)}</pre>"))
+    st.html("<div style='height: 16px;'></div>")
 
     filename = f"SupplyGuard_Incident_Report_w{current_window['window_id'] if current_window else 0}.md"
     st.download_button(

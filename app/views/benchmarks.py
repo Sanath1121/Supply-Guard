@@ -54,9 +54,9 @@ def render_benchmarks():
                 </div>
             </div>
             """
-            st.markdown(card(k, c_html), unsafe_allow_html=True)
+            st.html(card(k, c_html))
 
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    st.html("<div style='height: 20px;'></div>")
 
     # 2. Leaderboard Table
     st.markdown("#### Test-Partition Leaderboard (Derived TRI)")
@@ -111,7 +111,7 @@ def render_benchmarks():
             apply_theme(fig_bar, height=300)
             st.plotly_chart(fig_bar, use_container_width=True)
 
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    st.html("<div style='height: 20px;'></div>")
 
     # 3. Severity Classification & Confusion Matrix
     st.markdown("#### 3-Tier Severity Classification Performance")

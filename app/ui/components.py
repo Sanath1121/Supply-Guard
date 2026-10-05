@@ -21,20 +21,32 @@ def escape(text: Any) -> str:
     return html.escape(str(text))
 
 
+def clean_html(html_str: Any) -> str:
+    """Clean HTML string by stripping leading whitespace on every line.
+    
+    In CommonMark (Markdown parser used by Streamlit), any line indented by 4 or more
+    spaces is parsed as an indented code block (<pre><code>). Furthermore, blank lines
+    interrupt HTML block parsing. Stripping leading whitespace from every line and
+    omitting blank lines guarantees that CommonMark and st.html render pure styled HTML.
+    """
+    if not html_str:
+        return ""
+    lines = [line.strip() for line in str(html_str).strip().splitlines() if line.strip()]
+    return "\n".join(lines)
+
+
 def card(title: str, body_html: str, *, tone: Optional[str] = None) -> str:
     """Render a container card with optional status tone border (low, medium, high)."""
     tone_cls = f" sg-card-{escape(tone.lower())}" if tone else ""
     safe_title = escape(title)
-    return f"""
-    <div class="sg-card{tone_cls}">
-        <div style="font-size: 0.8125rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--sp-2);">
-            {safe_title}
-        </div>
-        <div>
-            {body_html}
-        </div>
-    </div>
-    """
+    cleaned_body = clean_html(body_html)
+    raw_html = (
+        f'<div class="sg-card{tone_cls}">'
+        f'<div style="font-size: 0.8125rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--sp-2);">{safe_title}</div>'
+        f'<div>{cleaned_body}</div>'
+        f'</div>'
+    )
+    return clean_html(raw_html)
 
 
 def status_badge(label: str, tier: str) -> str:
@@ -52,7 +64,7 @@ def status_badge(label: str, tier: str) -> str:
     glyph = glyphs.get(tier_lower, "●")
     pulse_cls = " pulse-high" if tier_lower == "high" else ""
     
-    return f"""<span class="sg-badge sg-badge-{escape(tier_lower)}{pulse_cls}">{glyph} {escape(label)}</span>"""
+    return f'<span class="sg-badge sg-badge-{escape(tier_lower)}{pulse_cls}">{glyph} {escape(label)}</span>'
 
 
 def metric_display(label: str, value: str, delta: Optional[str] = None, unit: Optional[str] = None, help_text: Optional[str] = None) -> str:
@@ -81,13 +93,14 @@ def metric_display(label: str, value: str, delta: Optional[str] = None, unit: Op
 
     title_attr = f' title="{escape(help_text)}"' if help_text else ""
 
-    return f"""
-    <div style="display: flex; flex-direction: column;"{title_attr}>
-        <div style="font-size: 0.75rem; font-weight: 500; color: var(--text-3); margin-bottom: 2px;">{safe_label}</div>
-        <div style="font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1.2;" class="mono-val">{safe_val}{safe_unit}</div>
-        {delta_html}
-    </div>
-    """
+    raw_html = (
+        f'<div style="display: flex; flex-direction: column;"{title_attr}>'
+        f'<div style="font-size: 0.75rem; font-weight: 500; color: var(--text-3); margin-bottom: 2px;">{safe_label}</div>'
+        f'<div style="font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1.2;" class="mono-val">{safe_val}{safe_unit}</div>'
+        f'{delta_html}'
+        f'</div>'
+    )
+    return clean_html(raw_html)
 
 
 def banner(kind: str, title: str, body: str, actions: Optional[str] = None) -> str:
@@ -98,7 +111,7 @@ def banner(kind: str, title: str, body: str, actions: Optional[str] = None) -> s
     safe_kind = escape(kind.lower())
     safe_title = escape(title)
     safe_body = escape(body)
-    actions_html = f'<div style="margin-top: 8px;">{actions}</div>' if actions else ""
+    actions_html = f'<div style="margin-top: 8px;">{clean_html(actions)}</div>' if actions else ""
 
     icons = {
         "warning": "⚠️",
@@ -108,30 +121,31 @@ def banner(kind: str, title: str, body: str, actions: Optional[str] = None) -> s
     }
     icon = icons.get(safe_kind, "ℹ️")
 
-    return f"""
-    <div class="sg-banner sg-banner-{safe_kind}" role="alert">
-        <div style="font-size: 1.125rem; line-height: 1;">{icon}</div>
-        <div style="flex: 1;">
-            <strong style="display: block; margin-bottom: 2px;">{safe_title}</strong>
-            <span style="font-size: 0.8125rem;">{safe_body}</span>
-            {actions_html}
-        </div>
-    </div>
-    """
+    raw_html = (
+        f'<div class="sg-banner sg-banner-{safe_kind}" role="alert">'
+        f'<div style="font-size: 1.125rem; line-height: 1;">{icon}</div>'
+        f'<div style="flex: 1;">'
+        f'<strong style="display: block; margin-bottom: 2px;">{safe_title}</strong>'
+        f'<span style="font-size: 0.8125rem;">{safe_body}</span>'
+        f'{actions_html}'
+        f'</div>'
+        f'</div>'
+    )
+    return clean_html(raw_html)
 
 
 def empty_state(title: str, body: str, command: Optional[str] = None):
     """Streamlit native render of an empty state with optional reproduction command."""
     safe_title = escape(title)
     safe_body = escape(body)
-    html_block = f"""
-    <div class="sg-card" style="text-align: center; padding: var(--sp-6) var(--sp-4); margin: var(--sp-4) 0;">
-        <div style="font-size: 1.75rem; margin-bottom: var(--sp-2);">📦</div>
-        <h4 style="margin: 0 0 var(--sp-2) 0; color: var(--text); font-size: 1.125rem;">{safe_title}</h4>
-        <p style="color: var(--text-2); font-size: 0.875rem; max-width: 600px; margin: 0 auto var(--sp-3) auto;">{safe_body}</p>
-    </div>
-    """
-    st.markdown(html_block, unsafe_allow_html=True)
+    html_block = clean_html(
+        f'<div class="sg-card" style="text-align: center; padding: var(--sp-6) var(--sp-4); margin: var(--sp-4) 0;">'
+        f'<div style="font-size: 1.75rem; margin-bottom: var(--sp-2);">📦</div>'
+        f'<h4 style="margin: 0 0 var(--sp-2) 0; color: var(--text); font-size: 1.125rem;">{safe_title}</h4>'
+        f'<p style="color: var(--text-2); font-size: 0.875rem; max-width: 600px; margin: 0 auto var(--sp-3) auto;">{safe_body}</p>'
+        f'</div>'
+    )
+    st.html(html_block)
     if command:
         st.caption("Reproduction command:")
         st.code(command, language="bash")
@@ -141,13 +155,13 @@ def section_header(title: str, subtitle: Optional[str] = None):
     """Render a consistent, professional section header."""
     safe_title = escape(title)
     sub_html = f'<p style="color: var(--text-2); font-size: 0.875rem; margin: 2px 0 0 0;">{escape(subtitle)}</p>' if subtitle else ""
-    html_block = f"""
-    <div style="margin-bottom: var(--sp-4);">
-        <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--text); margin: 0;">{safe_title}</h3>
-        {sub_html}
-    </div>
-    """
-    st.markdown(html_block, unsafe_allow_html=True)
+    html_block = clean_html(
+        f'<div style="margin-bottom: var(--sp-4);">'
+        f'<h3 style="font-size: 1.25rem; font-weight: 600; color: var(--text); margin: 0;">{safe_title}</h3>'
+        f'{sub_html}'
+        f'</div>'
+    )
+    st.html(html_block)
 
 
 def get_git_commit_hash() -> str:
@@ -217,7 +231,7 @@ def status_strip(status: ArtifactStatus, xai_gap: Optional[float] = None, xai_er
         xai_cls = "sg-chip"
         xai_txt = "Explainer: Ready"
 
-    strip_html = f"""
+    strip_html = clean_html(f"""
     <div class="sg-status-strip">
         <span style="font-weight: 700; color: var(--text-3); font-size: 0.75rem; letter-spacing: 0.06em; margin-right: 4px;">SYSTEM STATUS</span>
         <span class="sg-chip {data_cls}"><span class="sg-chip-dot"></span>{escape(data_txt)}</span>
@@ -226,20 +240,20 @@ def status_strip(status: ArtifactStatus, xai_gap: Optional[float] = None, xai_er
         <span class="sg-chip {tiers_cls}"><span class="sg-chip-dot"></span>{escape(tiers_txt)}</span>
         <span class="sg-chip {xai_cls}"><span class="sg-chip-dot"></span>{escape(xai_txt)}</span>
     </div>
-    """
-    st.markdown(strip_html, unsafe_allow_html=True)
+    """)
+    st.html(strip_html)
 
     # If any critical artifact is missing, show an explicit red warning banner
     if not status.model_loaded:
-        st.markdown(banner(
+        st.html(banner(
             "error",
             "Untrained Model Weights Active",
             f"No trained checkpoint was found for {status.model_name}/{status.graph_mode}/seed{status.seed}. "
             "Forecasts displayed on this dashboard are generated from randomly initialized weights for structural validation only and MUST NOT be scientifically interpreted."
-        ), unsafe_allow_html=True)
+        ))
     elif len(status.warnings) > 0:
         for w in status.warnings:
-            st.markdown(banner("warning", "System Notice", w), unsafe_allow_html=True)
+            st.html(banner("warning", "System Notice", w))
 
 
 def provenance_dict(status: ArtifactStatus, window_id: Optional[int] = None, timestamp: Optional[str] = None, delta_mode: bool = False) -> Dict[str, Any]:

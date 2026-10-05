@@ -21,12 +21,12 @@ def render_sandbox(
 ):
     """Render the isolated sandbox testing view."""
     # Permanent warning banner required by Rule R1
-    st.markdown(banner(
+    st.html(banner(
         "sandbox",
         "EXPERIMENTAL SANDBOX MODE ACTIVE",
         "Data ingested or simulated in this view does NOT belong to the untouched historical test partition. "
         "Outputs generated here are for exploratory scenario analysis and stress-testing only."
-    ), unsafe_allow_html=True)
+    ))
 
     section_header(
         "Isolated Scenario & Shock Testing Sandbox",
@@ -73,14 +73,14 @@ def render_sandbox(
             if status.model_name == "paper_overall" or preds.size == 1:
                 tri_val = float(preds[0])
                 t_tier = compute_tercile_tier(tri_val, p33, p66)
-                st.markdown(card("Simulated Total Risk Index", f"<div style='font-size: 1.5rem;' class='mono-val'>{tri_val:.3f} ({t_tier})</div>"), unsafe_allow_html=True)
+                st.html(card("Simulated Total Risk Index", f"<div style='font-size: 1.5rem;' class='mono-val'>{tri_val:.3f} ({t_tier})</div>"))
             else:
                 cols = st.columns(4)
                 for i, n in enumerate(Config.NODE_NAMES):
                     with cols[i]:
                         r = float(preds[i])
                         t = compute_tercile_tier(r, p33, p66)
-                        st.markdown(card(n, f"<div style='font-size: 1.25rem;' class='mono-val'>{r:.3f}</div><div style='margin-top:4px;'>{status_badge(t, t)}</div>", tone=t), unsafe_allow_html=True)
+                        st.html(card(n, f"<div style='font-size: 1.25rem;' class='mono-val'>{r:.3f}</div><div style='margin-top:4px;'>{status_badge(t, t)}</div>", tone=t))
 
     with tab_upload:
         st.markdown("Upload a test CSV sequence (max 20 MB, minimum 10 consecutive timestamps).")

@@ -24,7 +24,7 @@ from app.utils.artifacts import (
     get_tiers,
     get_test_windows,
 )
-from app.ui.components import status_strip
+from app.ui.components import status_strip, clean_html
 from app.views.overview import render_overview
 from app.views.monitor import render_monitor
 from app.views.why import render_why
@@ -62,12 +62,12 @@ def main():
 
     # 1. Sidebar Brand & Controls
     with st.sidebar:
-        st.markdown("""
+        st.html(clean_html("""
         <div style="padding: 4px 0 14px 0; border-bottom: 1px solid var(--border); margin-bottom: 14px;">
             <div style="font-size: 1.0625rem; font-weight: 700; color: var(--text); letter-spacing: 0.04em;">SUPPLYGUARD</div>
             <div style="font-size: 0.75rem; color: var(--text-3); margin-top: 2px;">Spatiotemporal Risk Intelligence</div>
         </div>
-        """, unsafe_allow_html=True)
+        """))
 
         # Reduced motion setting
         reduce_motion = st.checkbox("Reduce motion", value=False, help="Disable CSS animations for accessibility")
@@ -105,13 +105,13 @@ def main():
 
         # Live Measured Hardware Telemetry
         device_str = "CUDA (" + torch.cuda.get_device_name(0) + ")" if torch.cuda.is_available() else "CPU"
-        st.markdown(f"""
+        st.html(clean_html(f"""
         <div style="font-size: 0.75rem; color: var(--text-3); padding: 8px 10px; background: var(--surface-2); border-radius: var(--r-sm); border: 1px solid var(--border); margin-top: 8px;">
             <div><strong>Device:</strong> <span class="mono-val">{device_str}</span></div>
             <div style="margin-top: 2px;"><strong>PyTorch:</strong> <span class="mono-val">{torch.__version__}</span></div>
             <div style="margin-top: 2px;"><strong>Horizon:</strong> <span class="mono-val">t+{Config.HORIZON} (10 min)</span></div>
         </div>
-        """, unsafe_allow_html=True)
+        """))
 
     # 2. Honest Artifact Discovery and Loading
     model, is_loaded, ckpt_path, model_warn = get_model(model_name, graph_mode, seed)

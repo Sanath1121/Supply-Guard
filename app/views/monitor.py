@@ -11,7 +11,7 @@ import streamlit as st
 import plotly.graph_objects as go
 
 from src.config import Config
-from app.ui.components import card, status_badge, metric_display, banner, empty_state, section_header, escape
+from app.ui.components import card, status_badge, metric_display, banner, empty_state, section_header, escape, clean_html
 from app.ui.canvas import render_topology_svg
 from app.ui.plotly_theme import apply_theme, SERIES_COLORS
 from app.utils.artifacts import ArtifactStatus, get_tiers, get_scaler, predict_window
@@ -47,7 +47,7 @@ def render_monitor(
     cur_idx = st.session_state["window_idx"]
 
     # Replay Control Deck UI
-    st.markdown(f"""
+    st.html(clean_html(f"""
     <div style="background: linear-gradient(180deg, rgba(22, 34, 59, 0.7) 0%, rgba(11, 16, 32, 0.85) 100%); 
                 border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px 18px; margin-bottom: 16px;
                 box-shadow: var(--shadow-md); backdrop-filter: blur(16px);">
@@ -60,7 +60,7 @@ def render_monitor(
             </div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """))
 
     ctl_col1, ctl_col2, ctl_col3, ctl_col4 = st.columns([1, 8, 1, 2.5], vertical_alignment="center")
 
@@ -111,14 +111,14 @@ def render_monitor(
     seq = current_window["sequence"] # [10, 5]
     ground_truth = current_window.get("ground_truth", None)
 
-    st.markdown(f"""
+    st.html(clean_html(f"""
     <div style="display: flex; gap: 10px; align-items: center; margin-top: -6px; margin-bottom: 14px;">
         <span style="font-size: 0.8125rem; color: var(--text-3);">Active Window:</span>
         <span class="sg-chip mono-val" style="color: var(--text);">#{w_id + 1}</span>
         <span style="font-size: 0.8125rem; color: var(--text-3); margin-left: 8px;">Timestamp (t):</span>
         <span class="sg-chip mono-val" style="color: var(--accent);">{escape(w_ts)}</span>
     </div>
-    """, unsafe_allow_html=True)
+    """))
 
     # 2. Run Forward Inference
     t0 = time.perf_counter()
@@ -198,7 +198,7 @@ def render_monitor(
             </div>
         </div>
         """
-        st.markdown(card("Total Risk Index (TRI)", tri_body, tone=tri_tier), unsafe_allow_html=True)
+        st.html(card("Total Risk Index (TRI)", tri_body, tone=tri_tier))
 
     with top_col2:
         if is_scalar_model:
@@ -210,7 +210,7 @@ def render_monitor(
                 are unavailable for this model architecture. Switch to <strong>ST-GCN-LSTM</strong> or <strong>LSTM Baseline</strong> in the sidebar to inspect individual echelons.</p>
             </div>
             """
-            st.markdown(card("Base-Paper Model View", notice_html), unsafe_allow_html=True)
+            st.html(card("Base-Paper Model View", notice_html))
         else:
             # 4 Echelon Cards with High-End Layout
             echelon_icons = ["📦", "⚙️", "🚚", "🏪"]
@@ -243,7 +243,7 @@ def render_monitor(
                         </div>
                     </div>
                     """
-                    st.markdown(card(name, c_body, tone=e_tier), unsafe_allow_html=True)
+                    st.html(card(name, c_body, tone=e_tier))
                     if st.button(f"Inspect {name} →", key=f"inspect_node_{name}", use_container_width=True):
                         st.session_state["selected_node_idx"] = i
                         if "page_why" in st.session_state and st.session_state["page_why"] is not None:
@@ -251,7 +251,7 @@ def render_monitor(
                         else:
                             st.rerun()
 
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    st.html("<div style='height: 20px;'></div>")
 
     # 4. Tabs: [ Topology ] and [ Window Trajectories ]
     tab_topo, tab_traj = st.tabs(["Cascading Network Topology", "Spatiotemporal Trajectories"])
@@ -260,11 +260,10 @@ def render_monitor(
         if is_scalar_model:
             st.info("Topology edge attribution shares require node-level target predictions and are disabled for scalar models.")
         else:
-            st.markdown(
+            st.html(
                 "<div style='font-size: 0.8125rem; color: var(--text-3); margin-bottom: 10px;'>"
                 "Edge thickness reflects real Integrated Gradients attribution share from upstream echelons. Node pods represent severity tiers."
-                "</div>",
-                unsafe_allow_html=True
+                "</div>"
             )
             model_key = f"{status.model_name}:{status.graph_mode}:{status.seed}"
             with st.spinner("Calculating attribution edge shares..."):
@@ -272,7 +271,7 @@ def render_monitor(
 
             node_risks_dict = {Config.NODE_NAMES[i]: float(preds[i]) for i in range(4)}
             svg_html = render_topology_svg(node_risks_dict, tiers, edge_shares, xai_error=xai_err)
-            st.markdown(svg_html, unsafe_allow_html=True)
+            st.html(svg_html)
 
     with tab_traj:
         # Build Trajectory Plotly Chart with neutral series colors

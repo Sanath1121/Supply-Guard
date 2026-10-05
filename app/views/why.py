@@ -77,7 +77,7 @@ def render_why(
         residual_delta = (delta_mode_sel != "Full forecast attribution")
         st.caption("Explains total forecast $f(x) - f(x_0)$" if not residual_delta else "Explains incremental forecast delta over persistence: $g(x) = f(x) - y_t$")
 
-    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+    st.html("<div style='height: 12px;'></div>")
 
     # Compute attribution lazily
     model_key = f"{status.model_name}:{status.graph_mode}:{status.seed}"
@@ -99,8 +99,8 @@ def render_why(
         They explain the mathematical behavior of the neural network on this window, not verified physical real-world causation.
     </div>
     """
-    st.markdown(card(f"Forecast Narrative: {NODE_NAMES[target_idx]}", narrative_html), unsafe_allow_html=True)
-    st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
+    st.html(card(f"Forecast Narrative: {NODE_NAMES[target_idx]}", narrative_html))
+    st.html("<div style='height: 16px;'></div>")
 
     # 2. Charts Row: Signed Feature Attribution and Temporal Profile
     chart_col1, chart_col2 = st.columns([1, 1], gap="medium")
@@ -152,7 +152,7 @@ def render_why(
         apply_theme(fig_time, height=280)
         st.plotly_chart(fig_time, use_container_width=True)
 
-    st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
+    st.html("<div style='height: 16px;'></div>")
 
     # 3. Completeness Audit and Model Sensitivity (Deletion) Test
     aud_col, del_col = st.columns([1, 1], gap="medium")
@@ -178,7 +178,7 @@ def render_why(
             </div>
         </div>
         """
-        st.markdown(card("Completeness Axiom Audit", audit_html), unsafe_allow_html=True)
+        st.html(card("Completeness Axiom Audit", audit_html))
 
     with del_col:
         # Real Deletion Test
@@ -213,7 +213,7 @@ def render_why(
             </div>
         </div>
         """
-        st.markdown(card("Sensitivity Counterfactual Test", del_html), unsafe_allow_html=True)
+        st.html(card("Sensitivity Counterfactual Test", del_html))
 
     # 4. Illustrative Response Playbook Expander (Generic, honest copy)
     with st.expander("Illustrative Response Playbook (Operational Guidance – Not Model Output)"):

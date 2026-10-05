@@ -20,15 +20,15 @@ def render_overview(status: ArtifactStatus):
     # Highlights strip
     h_col1, h_col2, h_col3, h_col4 = st.columns(4, gap="small")
     with h_col1:
-        st.markdown(card("Architecture", "<div style='font-size:1.5rem; font-weight:800; color:#FFFFFF;' class='mono-val'>ST-GCN-LSTM</div><div style='font-size:0.75rem; color:var(--text-3); margin-top:2px;'>Hybrid Spatial-Temporal</div>"), unsafe_allow_html=True)
+        st.html(card("Architecture", "<div style='font-size:1.5rem; font-weight:800; color:#FFFFFF;' class='mono-val'>ST-GCN-LSTM</div><div style='font-size:0.75rem; color:var(--text-3); margin-top:2px;'>Hybrid Spatial-Temporal</div>"))
     with h_col2:
-        st.markdown(card("Forecasting Horizon", "<div style='font-size:1.5rem; font-weight:800; color:var(--accent);' class='mono-val'>t+5 (10 Min)</div><div style='font-size:0.75rem; color:var(--text-3); margin-top:2px;'>2-minute cadence</div>"), unsafe_allow_html=True)
+        st.html(card("Forecasting Horizon", "<div style='font-size:1.5rem; font-weight:800; color:var(--accent);' class='mono-val'>t+5 (10 Min)</div><div style='font-size:0.75rem; color:var(--text-3); margin-top:2px;'>2-minute cadence</div>"))
     with h_col3:
-        st.markdown(card("Cascading Echelons", "<div style='font-size:1.5rem; font-weight:800; color:#FFFFFF;' class='mono-val'>4 Nodes</div><div style='font-size:0.75rem; color:var(--text-3); margin-top:2px;'>S → M → D → R</div>"), unsafe_allow_html=True)
+        st.html(card("Cascading Echelons", "<div style='font-size:1.5rem; font-weight:800; color:#FFFFFF;' class='mono-val'>4 Nodes</div><div style='font-size:0.75rem; color:var(--text-3); margin-top:2px;'>S → M → D → R</div>"))
     with h_col4:
-        st.markdown(card("Data Splitting", "<div style='font-size:1.5rem; font-weight:800; color:#34D399;' class='mono-val'>80 / 10 / 10</div><div style='font-size:0.75rem; color:var(--text-3); margin-top:2px;'>Zero temporal leakage</div>"), unsafe_allow_html=True)
+        st.html(card("Data Splitting", "<div style='font-size:1.5rem; font-weight:800; color:#34D399;' class='mono-val'>80 / 10 / 10</div><div style='font-size:0.75rem; color:var(--text-3); margin-top:2px;'>Zero temporal leakage</div>"))
 
-    st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
+    st.html("<div style='height: 14px;'></div>")
 
     # 1. Executive Summary Card
     summary_html = """
@@ -40,8 +40,8 @@ def render_overview(status: ArtifactStatus):
         to quantify echelon sensitivity.
     </p>
     """
-    st.markdown(card("Project Scope & Purpose", summary_html), unsafe_allow_html=True)
-    st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
+    st.html(card("Project Scope & Purpose", summary_html))
+    st.html("<div style='height: 16px;'></div>")
 
     col1, col2 = st.columns([1, 1], gap="medium")
 
@@ -60,26 +60,22 @@ def render_overview(status: ArtifactStatus):
 
         def check_row(label: str, ok: bool, details: str) -> str:
             badge = status_badge("Verified", "low") if ok else status_badge("Missing", "high")
-            color = "var(--ok)" if ok else "var(--text-3)"
-            return f"""
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
-                <div>
-                    <div style="font-size: 0.875rem; font-weight: 500; color: var(--text);">{label}</div>
-                    <div style="font-size: 0.75rem; color: var(--text-3);">{details}</div>
-                </div>
-                <div>{badge}</div>
-            </div>
-            """
+            return (
+                f'<div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">'
+                f'<div><div style="font-size: 0.875rem; font-weight: 500; color: var(--text);">{label}</div>'
+                f'<div style="font-size: 0.75rem; color: var(--text-3);">{details}</div></div>'
+                f'<div>{badge}</div></div>'
+            )
 
-        pipeline_html = f"""
-        <div>
-            {check_row("1. Raw SCRM Dataset", has_data, f"{Config.RAW_DATA_PATH}")}
-            {check_row("2. Train-Fitted Scaler", has_scaler, f"{Config.SCALER_PATH}")}
-            {check_row("3. Trained Checkpoints", has_ckpt, f"{len(ckpt_files)} model weights in {Config.CKPT_DIR}")}
-            {check_row("4. Empirical Benchmark CSVs", has_results, "outputs/results/overall_metrics.csv")}
-        </div>
-        """
-        st.markdown(card("Pipeline Artifact Checklist", pipeline_html), unsafe_allow_html=True)
+        pipeline_html = (
+            f'<div>'
+            f'{check_row("1. Raw SCRM Dataset", has_data, str(Config.RAW_DATA_PATH))}'
+            f'{check_row("2. Train-Fitted Scaler", has_scaler, str(Config.SCALER_PATH))}'
+            f'{check_row("3. Trained Checkpoints", has_ckpt, f"{len(ckpt_files)} model weights in {Config.CKPT_DIR}")}'
+            f'{check_row("4. Empirical Benchmark CSVs", has_results, "outputs/results/overall_metrics.csv")}'
+            f'</div>'
+        )
+        st.html(card("Pipeline Artifact Checklist", pipeline_html))
 
     with col2:
         # 3. Dataset & Model Specifications (from Config)
@@ -111,9 +107,9 @@ def render_overview(status: ArtifactStatus):
             </tr>
         </table>
         """
-        st.markdown(card("Contract Specifications", specs_html), unsafe_allow_html=True)
+        st.html(card("Contract Specifications", specs_html))
 
-    st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
+    st.html("<div style='height: 16px;'></div>")
 
     # 4. "How to Read this Dashboard" Guide
     tiers_info = get_tiers()
@@ -148,7 +144,7 @@ def render_overview(status: ArtifactStatus):
         </p>
     </div>
     """
-    st.markdown(card("Operational Interpretation Guide", guide_html), unsafe_allow_html=True)
+    st.html(card("Operational Interpretation Guide", guide_html))
 
     # 5. Architecture Expander
     with st.expander("Neural Architecture Design Details"):
