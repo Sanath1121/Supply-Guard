@@ -1,17 +1,17 @@
 """Gate 3 Verification: Models, Graph Convolutions, and Baseline Architectures.
 
-Checks:
-1. Output tensor shapes: [B, 4] for node models, [B] for paper overall.
-2. Adjacency matrices: symmetric normalised adjacency, Laplacian eigenvalues in [0, 2],
-   directed upstream/downstream matrices.
-3. 2-hop gradient reachability: Supplier input must produce non-zero gradient on Distributor output.
-4. Residual path verification: With head zeroed, prediction equals persistence y_t.
-5. Sigmoid removal from PaperHybridOverall (allows unbounded/scaled predictions).
-6. Parameter counting function.
+Verifies:
+1. Graph adjacency matrices define S->M->D->R topology; normalized Laplacian eigenvalues in [0, 2].
+2. Output tensor shapes: [B, 4] for node models, [B] for PaperHybridOverall, tested with B=4 and B=1.
+3. 2-hop gradient reachability: Supplier input influences Distributor output through 2 GCN layers.
+4. Persistence residual identity: With head zeroed, predictions equal persistence baseline y_t.
+5. Sigmoid removal from PaperHybridOverall: Raw, unbounded real-valued scalar outputs.
+6. Parameter count verification matches outputs/results/param_counts.csv.
 """
 import os
 import sys
 import unittest
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -20,116 +20,27 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+from src.config import Config
+from src.graph_builder import build_graphs, normalised_laplacian
+from src.models import (
+    STGCNLSTM,
+    PaperHybridOverall,
+    LSTMBaseline,
+    build_model,
+    GraphConv,
+)
 
-# Minimal standalone implementation of Graph Conv & ST-GCN-LSTM for Gate 3 testing
-class GraphConv(nn.Module):
-    def __init__(self, in_features: int, out_features: int, mode: str = "directed"):
-        super().__init__()
-        self.mode = mode
-        if mode == "symmetric":
-            self.linear = nn.Linear(in_features, out_features, bias=False)
-        else:
-            self.linear_self = nn.Linear(in_features, out_features, bias=False)
-            self.linear_down = nn.Linear(in_features, out_features, bias=False)
-            self.linear_up = nn.Linear(in_features, out_features, bias=False)
-        self.bias = nn.Parameter(torch.zeros(out_features))
-
-    def forward(self, x: torch.Tensor, g: dict) -> torch.Tensor:
-        # x: [B, N, F]
-        if self.mode == "symmetric":
-            a_hat = g["A_hat"]
-            out = torch.einsum("nm,bmf->bnf", a_hat, x)
-            return self.linear(out) + self.bias
-        else:
-            h_self = self.linear_self(x)
-            h_down = torch.einsum("nm,bmf->bnf", g["A_down"], self.linear_down(x))
-            h_up = torch.einsum("nm,bmf->bnf", g["A_up"], self.linear_up(x))
-            return h_self + h_down + h_up + self.bias
-
-
-class STGCNLSTM(nn.Module):
-    def __init__(self, mode: str = "directed", residual: bool = True):
-        super().__init__()
-        self.mode = mode
-        self.residual = residual
-        # 2-layer GCN
-        self.gc1 = GraphConv(2, 16, mode=mode)
-        self.gc2 = GraphConv(16, 32, mode=mode)
-        self.lstm = nn.LSTM(input_size=32, hidden_size=64, num_layers=2, batch_first=True)
-        self.head = nn.Sequential(nn.Linear(64, 32), nn.ReLU(), nn.Linear(32, 1))
-
-    def forward(self, seq: torch.Tensor, g: dict) -> torch.Tensor:
-        # seq: [B, L, 5] -> 4 nodes + 1 cost
-        B, L, _ = seq.shape
-        node_risks = seq[:, :, :4]  # [B, L, 4]
-        cost = seq[:, :, 4:5]       # [B, L, 1]
-
-        # Build node features [B, L, 4, 2]
-        node_feats = torch.stack([node_risks, cost.expand(-1, -1, 4)], dim=-1)
-
-        # Apply GCN at every time step
-        gcn_steps = []
-        for t in range(L):
-            xt = node_feats[:, t]   # [B, 4, 2]
-            h1 = F.relu(self.gc1(xt, g))
-            h2 = F.relu(self.gc2(h1, g))
-            gcn_steps.append(h2)
-        H = torch.stack(gcn_steps, dim=1)  # [B, L, 4, 32]
-
-        # Transpose for per-node LSTM: [B*4, L, 32]
-        H_nodes = H.permute(0, 2, 1, 3).reshape(B * 4, L, 32)
-        lstm_out, _ = self.lstm(H_nodes)   # [B*4, L, 64]
-        last_hidden = lstm_out[:, -1]      # [B*4, 64]
-
-        delta = self.head(last_hidden).reshape(B, 4)
-        if self.residual:
-            y_t = node_risks[:, -1, :]     # persistence baseline
-            return y_t + delta
-        return delta
-
-
-class PaperHybridOverall(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.gc = nn.Linear(5, 32)
-        self.lstm = nn.LSTM(input_size=5, hidden_size=64, batch_first=True)
-        self.fc = nn.Linear(32 + 64, 1)
-
-    def forward(self, seq: torch.Tensor) -> torch.Tensor:
-        # seq: [B, L, 5]
-        B, L, _ = seq.shape
-        g_emb = F.relu(self.gc(seq[:, -1]))
-        _, (h_n, _) = self.lstm(seq)
-        l_emb = h_n[-1]
-        fused = torch.cat([g_emb, l_emb], dim=-1)
-        return self.fc(fused).squeeze(-1)  # Unbounded scalar (Sigmoid removed)
-
-
-def build_graphs():
-    """Build directed and symmetric graph adjacency matrices."""
-    A_raw = torch.tensor([
-        [0., 1., 0., 0.],
-        [1., 0., 1., 0.],
-        [0., 1., 0., 1.],
-        [0., 0., 1., 0.]
-    ])
-    A_tilde = A_raw + torch.eye(4)
-    deg = torch.diag(torch.pow(A_tilde.sum(1), -0.5))
-    A_hat = deg @ A_tilde @ deg
-
-    A_down = torch.tensor([
-        [0., 0., 0., 0.],
-        [1., 0., 0., 0.],
-        [0., 1., 0., 0.],
-        [0., 0., 1., 0.]
-    ])
-    A_up = torch.tensor([
-        [0., 1., 0., 0.],
-        [0., 0., 1., 0.],
-        [0., 0., 0., 1.],
-        [0., 0., 0., 0.]
-    ])
-    return {"A_hat": A_hat, "A_down": A_down, "A_up": A_up}
+# Re-exports for downstream test suites (Phase 4, Phase 6, Phase 8)
+__all__ = [
+    "STGCNLSTM",
+    "PaperHybridOverall",
+    "LSTMBaseline",
+    "build_model",
+    "GraphConv",
+    "build_graphs",
+    "normalised_laplacian",
+    "TestPhase3Models",
+]
 
 
 class TestPhase3Models(unittest.TestCase):
@@ -139,40 +50,72 @@ class TestPhase3Models(unittest.TestCase):
         self.B, self.L = 4, 10
         self.sample_seq = torch.rand(self.B, self.L, 5)
 
-    def test_01_graph_adjacency_properties(self):
-        """Verify symmetric A_hat and directed A_down/A_up."""
+    def test_01_graph_adjacency_and_laplacian(self):
+        """Verify symmetric A_hat, directed A_down/A_up, and Laplacian eigenvalues."""
         A_hat = self.graphs["A_hat"]
         self.assertTrue(torch.equal(A_hat, A_hat.T), "A_hat must be symmetric")
 
-        # Directed edge checks
-        self.assertEqual(self.graphs["A_down"][1, 0].item(), 1.0, "Manufacturer receives from Supplier")
-        self.assertEqual(self.graphs["A_down"][0].sum().item(), 0.0, "Supplier has no upstream in down")
-        self.assertEqual(self.graphs["A_up"][0, 1].item(), 1.0, "Supplier receives upstream feedback from M")
+        # Directed edge checks: S(0) -> M(1) -> D(2) -> R(3)
+        A_down = self.graphs["A_down"]
+        self.assertEqual(A_down[1, 0].item(), 1.0, "Manufacturer receives downstream from Supplier")
+        self.assertEqual(A_down[2, 1].item(), 1.0, "Distributor receives downstream from Manufacturer")
+        self.assertEqual(A_down[3, 2].item(), 1.0, "Retailer receives downstream from Distributor")
+        self.assertEqual(A_down[0].sum().item(), 0.0, "Supplier has no upstream parents in A_down")
+
+        A_up = self.graphs["A_up"]
+        self.assertEqual(A_up[0, 1].item(), 1.0, "Supplier receives upstream feedback from Manufacturer")
+        self.assertEqual(A_up[1, 2].item(), 1.0, "Manufacturer receives upstream feedback from Distributor")
+        self.assertEqual(A_up[2, 3].item(), 1.0, "Distributor receives upstream feedback from Retailer")
+        self.assertEqual(A_up[3].sum().item(), 0.0, "Retailer has no downstream children in A_up")
+
+        # Normalized Laplacian sanity check
+        L = normalised_laplacian(4)
+        self.assertTrue(torch.allclose(L, L.T, atol=1e-6), "Laplacian must be symmetric")
+        eigenvalues = torch.linalg.eigvalsh(L)
+        self.assertTrue((eigenvalues >= -1e-6).all(), "Laplacian eigenvalues must be non-negative")
+        self.assertTrue((eigenvalues <= 2.0 + 1e-6).all(), "Normalized Laplacian eigenvalues must be <= 2")
 
     def test_02_model_forward_shapes(self):
-        """Verify [B, 4] for STGCNLSTM and [B] for PaperHybridOverall."""
+        """Verify output shapes: [B, 4] for node models, [B] for PaperHybridOverall."""
         m_stgcn_dir = STGCNLSTM(mode="directed", residual=True)
         m_stgcn_sym = STGCNLSTM(mode="symmetric", residual=True)
+        m_lstm = LSTMBaseline(residual=True)
         m_paper = PaperHybridOverall()
 
-        out_dir = m_stgcn_dir(self.sample_seq, self.graphs)
-        out_sym = m_stgcn_sym(self.sample_seq, self.graphs)
+        # Batch size 4 testing with single input tensor contract seq [B, L, 5]
+        out_dir = m_stgcn_dir(self.sample_seq)
+        out_sym = m_stgcn_sym(self.sample_seq)
+        out_lstm = m_lstm(self.sample_seq)
         out_paper = m_paper(self.sample_seq)
 
         self.assertEqual(out_dir.shape, (self.B, 4))
         self.assertEqual(out_sym.shape, (self.B, 4))
+        self.assertEqual(out_lstm.shape, (self.B, 4))
         self.assertEqual(out_paper.shape, (self.B,))
+
+        # Verify backwards-compatible invocation with explicit graphs passed
+        out_dir_g = m_stgcn_dir(self.sample_seq, self.graphs)
+        self.assertEqual(out_dir_g.shape, (self.B, 4))
+
+        # Edge case: Batch size 1 (must preserve batch dimension, no 0D collapse)
+        seq_single = torch.rand(1, self.L, 5)
+        self.assertEqual(m_stgcn_dir(seq_single).shape, (1, 4))
+        self.assertEqual(m_paper(seq_single).shape, (1,))
 
     def test_03_two_hop_gradient_reachability(self):
         """Verify that in 2-layer GCN, Supplier input influences Distributor output."""
         x = torch.rand(2, 10, 5, requires_grad=True)
         model = STGCNLSTM(mode="directed", residual=False)
+        model.eval()
+
         # Initialize head with non-zero weights so gradients flow backwards
         for p in model.head.parameters():
             if p.dim() > 1:
                 nn.init.xavier_normal_(p)
+            else:
+                nn.init.ones_(p)
 
-        out = model(x, self.graphs)
+        out = model(x)
         # Backprop from Distributor output (index 2)
         out[:, 2].sum().backward()
 
@@ -183,14 +126,54 @@ class TestPhase3Models(unittest.TestCase):
     def test_04_residual_path_identity(self):
         """Verify that when delta head is zero, model outputs exact persistence baseline."""
         model = STGCNLSTM(mode="directed", residual=True)
+        model.eval()
+
         # Zero out the final layer of the head
         with torch.no_grad():
             for p in model.head.parameters():
                 p.zero_()
 
-        out = model(self.sample_seq, self.graphs)
+        out = model(self.sample_seq)
         expected_persistence = self.sample_seq[:, -1, :4]
         self.assertTrue(torch.allclose(out, expected_persistence, atol=1e-6))
+        self.assertEqual((out - expected_persistence).abs().max().item(), 0.0)
+
+        # Also verify LSTMBaseline residual identity
+        m_lstm = LSTMBaseline(residual=True)
+        m_lstm.eval()
+        with torch.no_grad():
+            for p in m_lstm.head.parameters():
+                p.zero_()
+        out_lstm = m_lstm(self.sample_seq)
+        self.assertEqual((out_lstm - expected_persistence).abs().max().item(), 0.0)
+
+    def test_05_paper_hybrid_sigmoid_removal(self):
+        """Verify that nn.Sigmoid is removed from PaperHybridOverall for unbounded predictions."""
+        m_paper = PaperHybridOverall()
+        has_sigmoid = any(isinstance(layer, nn.Sigmoid) for layer in m_paper.fc)
+        self.assertFalse(has_sigmoid, "nn.Sigmoid must be removed from PaperHybridOverall.fc")
+
+        # Test that outputs are unbounded and can handle large inputs
+        x_extreme = torch.ones(2, self.L, 5) * 100.0
+        out_extreme = m_paper(x_extreme)
+        self.assertTrue(torch.is_tensor(out_extreme))
+        self.assertEqual(out_extreme.shape, (2,))
+
+    def test_06_parameter_counts_report(self):
+        """Verify parameter count report exists and records 4 valid architectures."""
+        csv_path = os.path.join(PROJECT_ROOT, "outputs", "results", "param_counts.csv")
+        self.assertTrue(os.path.exists(csv_path), "outputs/results/param_counts.csv must exist")
+
+        df = pd.read_csv(csv_path)
+        self.assertEqual(len(df), 4, "param_counts.csv must contain exactly 4 model rows")
+        self.assertListEqual(list(df.columns), ["model", "total_params", "trainable_params"])
+        self.assertTrue((df["total_params"] > 0).all(), "total_params must be positive")
+        self.assertTrue((df["trainable_params"] > 0).all(), "trainable_params must be positive")
+
+        # Check parameter delta: directed GCN has 2,176 more parameters than symmetric GCN
+        dir_params = df[df["model"].str.contains("directed")]["total_params"].iloc[0]
+        sym_params = df[df["model"].str.contains("symmetric")]["total_params"].iloc[0]
+        self.assertEqual(dir_params - sym_params, 2176, "Directed mode must have 2,176 more params than symmetric mode")
 
 
 if __name__ == "__main__":
