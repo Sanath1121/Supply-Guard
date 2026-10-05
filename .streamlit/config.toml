@@ -2,15 +2,17 @@
 gatherUsageStats = false
 
 [server]
+enableStaticServing = true
 headless = true
 port = 8501
+# Local demo only - re-enable CORS and XSRF for production deployment
 enableCORS = false
 enableXsrfProtection = false
 
 [theme]
 base = "dark"
-primaryColor = "#06B6D4"
-backgroundColor = "#070B14"
-secondaryBackgroundColor = "#0D1527"
+primaryColor = "#38BDF8"
+backgroundColor = "#0B1020"
+secondaryBackgroundColor = "#111A2E"
 textColor = "#F1F5F9"
 font = "sans serif"

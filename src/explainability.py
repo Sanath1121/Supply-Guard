@@ -28,22 +28,39 @@ class RiskExplainer:
         b = self.baseline
         return b.expand_as(seq).clone() if b.dim() == 1 else b.clone()
 
-    def explain(self, seq: torch.Tensor, target_node: int) -> dict:
+    def explain(self, seq: torch.Tensor, target_node: int, residual_delta: bool = False) -> dict:
         """seq: [L, F] one window. Returns signed attributions [L, F] plus summaries."""
         with torch.enable_grad():
             x = seq.detach().float()
             base = self._baseline_like(x)
             alphas = torch.linspace(0.0, 1.0, self.steps + 1)[1:].view(-1, 1, 1)   # right Riemann sum
             path = (base + alphas * (x - base)).requires_grad_(True)               # [S, L, F]
-            out = self.model(path)[:, target_node].sum()
+            preds = self.model(path)
+            if preds.dim() > 1 and preds.shape[-1] > 1:
+                node_out = preds[:, target_node]
+            else:
+                node_out = preds.squeeze(-1)
+
+            if residual_delta:
+                node_out = node_out - path[:, -1, target_node]
+
+            out = node_out.sum()
             grads, = torch.autograd.grad(out, path)
             attr = (x - base) * grads.mean(dim=0)                                  # [L, F]
 
         with torch.no_grad():
-            f_x = float(self.model(x.unsqueeze(0))[0, target_node])
-            f_b = float(self.model(base.unsqueeze(0))[0, target_node])
+            m_x = self.model(x.unsqueeze(0))
+            raw_fx = float(m_x[0, target_node] if m_x.dim() > 1 and m_x.shape[-1] > 1 else m_x.squeeze())
+            m_b = self.model(base.unsqueeze(0))
+            raw_fb = float(m_b[0, target_node] if m_b.dim() > 1 and m_b.shape[-1] > 1 else m_b.squeeze())
+            if residual_delta:
+                f_x = raw_fx - float(x[-1, target_node])
+                f_b = raw_fb - float(base[-1, target_node])
+            else:
+                f_x = raw_fx
+                f_b = raw_fb
 
-        a = attr.numpy()
+        a = attr.detach().cpu().numpy()
         abs_a = np.abs(a)
         total = abs_a.sum() + 1e-12
         feat_abs, time_abs = abs_a.sum(axis=0), abs_a.sum(axis=1)
@@ -59,8 +76,8 @@ class RiskExplainer:
             "total_abs_attribution": float(total),                # magnitude, not just shares
         }
 
-    def explain_all(self, seq: torch.Tensor) -> list:
-        return [self.explain(seq, i) for i in range(len(NODE_NAMES))]
+    def explain_all(self, seq: torch.Tensor, residual_delta: bool = False) -> list:
+        return [self.explain(seq, i, residual_delta=residual_delta) for i in range(len(NODE_NAMES))]
 
 
 def upstream_share(result: dict) -> float:
