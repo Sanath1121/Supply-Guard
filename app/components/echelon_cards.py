@@ -1,8 +1,7 @@
-"""Echelon Risk Health Cards Component.
+"""Echelon Operational Risk Health Cards Component.
 
 Displays the 4 dedicated echelon cards (Supplier, Manufacturer, Distributor, Retailer)
-with dual-metric display, tercile badges, trend arrows, and prescriptive action recommendations.
-Directly compliant with tests/test_phase7_app.py.
+with cyber glassmorphism, bold telemetry metrics, unscaled physical values, and prescriptive guidance.
 """
 from typing import Dict, Any, List
 import streamlit as st
@@ -16,7 +15,7 @@ PRESCRIPTIVE_GUIDANCE = {
     "Supplier": {
         "High": "🚨 <strong>Action:</strong> Trigger secondary supplier buffer contracts; expedite tier-2 raw material shipment audits.",
         "Medium": "⚠️ <strong>Notice:</strong> Monitor supplier lead-time variance; prepare contingency purchase orders.",
-        "Low": "✅ <strong>Nominal:</strong> Supplier sourcing lead times and quality rates are stable."
+        "Low": "✅ <strong>Nominal:</strong> Supplier sourcing lead times and quality defect rates are stable."
     },
     "Manufacturer": {
         "High": "🚨 <strong>Action:</strong> Rebalance assembly lines; throttle high-defect SKUs by 15%; prioritize WIP buffers.",
@@ -35,6 +34,13 @@ PRESCRIPTIVE_GUIDANCE = {
     }
 }
 
+ECHELON_ICONS = {
+    "Supplier": "📦",
+    "Manufacturer": "⚙️",
+    "Distributor": "🚚",
+    "Retailer": "🛒"
+}
+
 
 def render_echelon_cards(
     pred_risks: np.ndarray,
@@ -44,68 +50,89 @@ def render_echelon_cards(
     selected_node_idx: int = 0
 ) -> int:
     """Render the 4 echelon cards in a clean 4-column responsive grid."""
-    st.markdown("### 📊 Echelon Operational Risk Health Cards")
+    st.markdown("""
+    <div style="margin: 20px 0 10px 0;">
+        <h3 style="margin: 0; font-family: 'Outfit'; font-size: 1.35rem; color: #FFFFFF; font-weight: 800;">
+            📊 Multi-Echelon Risk Health Cards
+        </h3>
+        <p style="margin: 4px 0 0 0; color: #94A3B8; font-size: 0.85rem;">
+            Individual forward-forecasted risk indices with train-tercile severity badges and unscaled real-world units.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
     cols = st.columns(4)
     echelons = Config.NODE_NAMES
     updated_selection = selected_node_idx
+
+    tier_palette = {
+        "Low": "#00F5A0",
+        "Medium": "#FFB300",
+        "High": "#FF2E54"
+    }
 
     for i, name in enumerate(echelons):
         scaled_val = float(pred_risks[i])
         raw_val = raw_risks.get(name, scaled_val)
         tier = compute_tercile_tier(scaled_val)
-        card_data = format_echelon_card(name, scaled_val, raw_val, tier)
+        color = tier_palette.get(tier, "#00F2FE")
 
         # Delta trend from past step t
         prev_val = float(prev_step_risks[i]) if len(prev_step_risks) > i else scaled_val
         delta = scaled_val - prev_val
         trend_symbol = "▲" if delta > 0.01 else ("▼" if delta < -0.01 else "▬")
-        trend_color = "#EF4444" if delta > 0.01 else ("#10B981" if delta < -0.01 else "#94A3B8")
+        trend_color = "#FF2E54" if delta > 0.01 else ("#00F5A0" if delta < -0.01 else "#94A3B8")
 
         # Visual styling
-        card_class = f"sg-card sg-card-{tier.lower()}"
         is_selected = (selected_node_idx == i)
-        border_highlight = "border: 2px solid #06B6D4;" if is_selected else ""
+        glow_border = "border: 2px solid #00F2FE; box-shadow: 0 0 25px rgba(0, 242, 254, 0.3);" if is_selected else ""
+        card_class = f"sg-glass-card echelon-{tier.lower()[:3]}"
+        icon = ECHELON_ICONS.get(name, "📍")
 
         with cols[i]:
             st.markdown(f"""
-            <div class="{card_class}" style="{border_highlight}">
+            <div class="{card_class}" style="{glow_border}">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 0.85rem; font-weight: 700; color: #FFFFFF;">
-                        {name}
-                    </span>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 1.1rem;">{icon}</span>
+                        <span style="font-size: 0.95rem; font-weight: 800; color: #FFFFFF; font-family: 'Outfit';">
+                            {name}
+                        </span>
+                    </div>
                     <span class="badge-pill badge-{tier.lower()}">
                         {tier}
                     </span>
                 </div>
-                <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px;">
-                    <span style="font-size: 1.8rem; font-weight: 800; font-family: 'Outfit'; color: {card_data['color']};">
-                        {card_data['scaled_score']}
+                <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px;">
+                    <span style="font-size: 2.2rem; font-weight: 900; font-family: 'Outfit'; color: {color}; letter-spacing: -0.02em;">
+                        {scaled_val:.3f}
                     </span>
-                    <span style="font-size: 0.85rem; color: {trend_color}; font-weight: 600;">
+                    <span style="font-size: 0.85rem; color: {trend_color}; font-weight: 700; font-family: 'JetBrains Mono';">
                         {trend_symbol} {abs(delta):.3f} &Delta;
                     </span>
                 </div>
-                <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 8px;">
-                    Raw Physical Unit: <strong style="color: #F1F5F9;">{card_data['raw_metric']}</strong>
+                <div style="background: rgba(11, 15, 25, 0.6); padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px;">
+                    <span style="font-size: 0.74rem; color: #94A3B8;">Raw Physical Unit:</span>
+                    <strong style="color: #FFFFFF; font-size: 0.82rem; font-family: 'JetBrains Mono'; float: right;">{raw_val:.2f} RI</strong>
                 </div>
-                <div style="font-size: 0.72rem; color: #64748B; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
-                    Tercile Threshold: Low &lt;0.35 | Med 0.35-0.65 | High &gt;0.65
+                <div style="font-size: 0.7rem; color: #64748B;">
+                    Threshold: &lt;0.35 Low | 0.35-0.65 Med | &gt;0.65 High
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            if st.button(f"🔍 Inspect {name}", key=f"btn_inspect_{name}", use_container_width=True):
+            if st.button(f"{'🎯 Inspected' if is_selected else '🔍 Inspect'} {name}", key=f"btn_inspect_{name}", use_container_width=True):
                 updated_selection = i
 
-    # Display prescriptive guidance for selected node
+    # Prescriptive guidance alert box
     active_node = echelons[updated_selection]
     active_tier = compute_tercile_tier(float(pred_risks[updated_selection]))
     guidance_msg = PRESCRIPTIVE_GUIDANCE.get(active_node, {}).get(active_tier, "")
 
     st.markdown(f"""
-    <div class="prescriptive-box">
-        <strong>Decision Support Guidance for [{active_node}]:</strong><br>
-        {guidance_msg}
+    <div style="background: rgba(15, 23, 42, 0.85); border-left: 4px solid #00F2FE; border-radius: 10px; padding: 12px 16px; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.06); border-right: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06);">
+        <span style="font-size: 0.85rem; color: #00F2FE; font-weight: 700;">DECISION SUPPORT PROTOCOL &bull; [{active_node.upper()}]:</span><br>
+        <span style="color: #E2E8F0; font-size: 0.88rem; line-height: 1.5;">{guidance_msg}</span>
     </div>
     """, unsafe_allow_html=True)
 
