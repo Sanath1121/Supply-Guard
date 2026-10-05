@@ -37,39 +37,63 @@ def agg(df, keys):
     return out.drop(columns=[c for c in out.columns if c.startswith("seed")], errors="ignore").reset_index()
 
 
-def main(cfg=None, models=("lstm", "paper_overall", "st_gcn_lstm"), seeds=None):
+def main(cfg=None, models=("lstm", "paper_overall", "st_gcn_lstm_sym", "st_gcn_lstm_dir"), seeds=None):
     cfg = cfg or Config(); seeds = seeds or cfg.SEEDS
     tr, va, te, scaler, info = build_datasets(cfg, save_scaler=False)
     y = te.node_targets.numpy(); tri = y.mean(1)
     rng = scaler.data_range_[:4]                          # raw = scaled * range + min
-    lo, hi = np.quantile(tr.node_targets.numpy(), [1 / 3, 2 / 3])   # tiers from TRAIN distribution only
+    dmin = scaler.data_min_[:4]
+    
+    # Exact raw TRI for targets
+    raw_y = y * rng + dmin
+    raw_tri = raw_y.mean(1)
+
+    # Terciles per node (from train distribution)
+    lo, hi = np.quantile(tr.node_targets.numpy(), [1 / 3, 2 / 3], axis=0)
 
     preds = {}                                            # name -> list of [N,4] (or [N] for paper) arrays
     preds["persistence"] = [te.sequences[:, -1, :4].numpy()]
     Xtr, Xte = tr.sequences.numpy().reshape(len(tr), -1), te.sequences.numpy().reshape(len(te), -1)
     preds["ar10_ridge"] = [Ridge(alpha=1e-3).fit(Xtr, tr.node_targets.numpy()).predict(Xte)]
     for name in models:
-        key = f"{name}_{cfg.GRAPH_MODE}" if name == "st_gcn_lstm" else name
-        preds[key] = []
+        preds[name] = []
         for s in seeds:
             p = ckpt_path(cfg, name, s)
             if not os.path.exists(p):
                 print("missing", p); continue
-            m = build_model(name, cfg); m.load_state_dict(torch.load(p, map_location="cpu")); preds[key].append(predict(m, te))
+            m = build_model(name, cfg); m.load_state_dict(torch.load(p, map_location="cpu")); preds[name].append(predict(m, te))
 
     overall, node, sev = [], [], []
     for name, plist in preds.items():
         for s, p in enumerate(plist):
             is_node = p.ndim == 2
             tri_p = p.mean(1) if is_node else p
-            r = reg(tri, tri_p); r_raw = reg(tri * rng.mean(), tri_p * rng.mean())   # approx raw TRI scale (mean range)
-            overall.append({"model": name, "seed": s, **r, "MSE_raw_approx": r_raw["MSE"]})
+            r = reg(tri, tri_p)
+            
+            # Exact raw TRI prediction
+            if is_node:
+                raw_p = p * rng + dmin
+                raw_tri_p = raw_p.mean(1)
+            else:
+                # For paper_overall, TRI is directly predicted in scaled space
+                # We approximate back by using mean range and min, though paper model doesn't output per-node
+                raw_tri_p = tri_p * rng.mean() + dmin.mean()
+                
+            r_raw = reg(raw_tri, raw_tri_p)
+            overall.append({"model": name, "seed": s, **r, "MSE_raw": r_raw["MSE"]})
             if is_node:
                 for i, nn_ in enumerate(cfg.NODE_NAMES):
                     rr = reg(y[:, i], p[:, i])
                     node.append({"model": name, "node": nn_, "seed": s, **rr, "MSE_raw": rr["MSE"] * rng[i] ** 2,
                                  "RMSE_raw": rr["RMSE"] * rng[i]})
-                st, sp = severity(y.ravel(), lo, hi), severity(p.ravel(), lo, hi)
+                
+                # Severity metrics per node
+                st_list, sp_list = [], []
+                for i in range(4):
+                    st_list.append(severity(y[:, i], lo[i], hi[i]))
+                    sp_list.append(severity(p[:, i], lo[i], hi[i]))
+                st = np.concatenate(st_list)
+                sp = np.concatenate(sp_list)
                 sev.append({"model": name, "seed": s, "accuracy": accuracy_score(st, sp), "macro_F1": f1_score(st, sp, average="macro")})
 
     os.makedirs("outputs/results", exist_ok=True)
@@ -79,7 +103,7 @@ def main(cfg=None, models=("lstm", "paper_overall", "st_gcn_lstm"), seeds=None):
     s_.to_csv("outputs/results/severity_metrics.csv", index=False)
     pd.set_option("display.width", 200)
     print("\n== OVERALL (derived TRI) ==\n", o[["model", "MSE_mean", "MSE_std", "MAE_mean", "R2_mean", "R2_std"]].to_string(index=False))
-    print("\n== SEVERITY (tiers from train terciles: %.3f / %.3f) ==\n" % (lo, hi), s_.to_string(index=False))
+    print("\n== SEVERITY (tiers per node) ==\n", s_.to_string(index=False))
     return o, n_, s_
 
 

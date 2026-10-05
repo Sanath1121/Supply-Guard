@@ -12,7 +12,7 @@ from src.config import Config
 from src.dataset import build_datasets
 from src.models.st_gcn_lstm import build_model
 
-MODEL_NAMES = ["lstm", "paper_overall", "st_gcn_lstm"]
+MODEL_NAMES = ["lstm", "paper_overall", "st_gcn_lstm_sym", "st_gcn_lstm_dir"]
 
 
 def set_seed(seed: int):
@@ -26,8 +26,7 @@ def _loss(model_name, model, batch):
 
 
 def ckpt_path(cfg, name, seed):
-    tag = f"{name}_{cfg.GRAPH_MODE}" if name == "st_gcn_lstm" else name
-    return os.path.join(cfg.CKPT_DIR, f"{tag}_seed{seed}.pt")
+    return os.path.join(cfg.CKPT_DIR, f"{name}_seed{seed}.pt")
 
 
 def train_one(cfg, name, seed, tr, va, log=print):
@@ -40,6 +39,7 @@ def train_one(cfg, name, seed, tr, va, log=print):
     best, bad, hist = float("inf"), 0, []
     path = ckpt_path(cfg, name, seed)
     for ep in range(1, cfg.MAX_EPOCHS + 1):
+        ep_t0 = time.time()
         model.train(); tl, n = 0.0, 0
         for b in tr_dl:
             opt.zero_grad(); loss = _loss(name, model, b); loss.backward()
@@ -50,6 +50,9 @@ def train_one(cfg, name, seed, tr, va, log=print):
             for b in va_dl:
                 vl += _loss(name, model, b).item() * len(b["sequence"]); m += len(b["sequence"])
         tl, vl = tl / n, vl / m
+        ep_elapsed = time.time() - ep_t0
+        if ep == 1:
+            log(f"  epoch 1 time: {ep_elapsed:.2f}s")
         hist.append({"epoch": ep, "train_loss": tl, "val_loss": vl})
         if vl < best - 1e-7:
             best, bad = vl, 0; torch.save(model.state_dict(), path)
@@ -71,9 +74,21 @@ def main(cfg=None, models=MODEL_NAMES, seeds=None):
         import mlflow; mlflow.set_experiment("SupplyGuard")
     except Exception:
         mlflow = None
-    rows = []
+    
+    summary_path = "outputs/results/training_summary.csv"
+    if os.path.exists(summary_path):
+        summary_df = pd.read_csv(summary_path)
+        rows = summary_df.to_dict("records")
+    else:
+        rows = []
+
     for name in models:
         for seed in seeds:
+            path = ckpt_path(cfg, name, seed)
+            if os.path.exists(path):
+                print(f"[{name} seed={seed}] Skipping, checkpoint exists.")
+                continue
+
             t0 = time.time(); print(f"[{name} seed={seed}]")
             if mlflow:
                 with mlflow.start_run(run_name=f"{name}_s{seed}"):
@@ -85,10 +100,14 @@ def main(cfg=None, models=MODEL_NAMES, seeds=None):
                     mlflow.log_artifact(path)
             else:
                 best, hist, path = train_one(cfg, name, seed, tr, va)
-            hist.to_csv(f"outputs/results/{name}_{cfg.GRAPH_MODE}_seed{seed}_loss.csv", index=False)
-            print(f"  best val loss {best:.6f}  ({time.time()-t0:.0f}s, {len(hist)} epochs)")
-            rows.append({"model": name, "seed": seed, "best_val_loss": best})
-    pd.DataFrame(rows).to_csv("outputs/results/training_summary.csv", index=False)
+            
+            elapsed = time.time() - t0
+            hist.to_csv(f"outputs/results/{name}_seed{seed}_loss.csv", index=False)
+            print(f"  best val loss {best:.6f}  ({elapsed:.0f}s, {len(hist)} epochs)")
+            
+            # Append result row and save progressively
+            rows.append({"model": name, "seed": seed, "best_val_loss": best, "wall_clock_s": elapsed})
+            pd.DataFrame(rows).to_csv(summary_path, index=False)
 
 
 if __name__ == "__main__":

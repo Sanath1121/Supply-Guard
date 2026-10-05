@@ -63,7 +63,7 @@ def main():
     print("graph OK")
 
     # --- dataset: chronology, leakage, shapes, gap integrity ----------------
-    tr, va, te, sc, info = build_datasets(cfg)
+    tr, va, te, sc, info = build_datasets(cfg, save_scaler=False)
 
     # Assert shapes: sequences [N, 10, 5], node_targets [N, 4]
     for split_name, ds in [("train", tr), ("val", va), ("test", te)]:

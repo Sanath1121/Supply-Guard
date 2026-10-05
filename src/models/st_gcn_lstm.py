@@ -73,7 +73,7 @@ class STGCNLSTM(nn.Module):
         _, (h_n, _) = self.lstm(h)                                 # shared LSTM over each node's own series
         z = h_n[-1].reshape(B, N, -1)                              # [B, 4, 64]  (distinct per node)
         out = self.head(z).squeeze(-1)                             # [B, 4]
-        return seq[:, -1, :N] + out if self.residual else torch.sigmoid(out)
+        return seq[:, -1, :N] + out if self.residual else out
 
 
 class LSTMBaseline(nn.Module):
@@ -103,7 +103,7 @@ class LSTMBaseline(nn.Module):
     def forward(self, seq: torch.Tensor) -> torch.Tensor:
         _, (h_n, _) = self.lstm(seq)
         out = self.head(h_n[-1])
-        return seq[:, -1, :self.cfg.NUM_NODES] + out if self.residual else torch.sigmoid(out)
+        return seq[:, -1, :self.cfg.NUM_NODES] + out if self.residual else out
 
 
 class PaperHybridOverall(nn.Module):
@@ -142,4 +142,11 @@ def build_model(name: str, cfg=None) -> nn.Module:
     if cfg is None:
         from src.config import Config
         cfg = Config()
+    
+    if name.startswith("st_gcn_lstm_"):
+        mode = name.split("_")[-1]
+        cfg = copy.copy(cfg)
+        cfg.GRAPH_MODE = "symmetric" if mode == "sym" else "directed"
+        return STGCNLSTM(cfg)
+        
     return MODELS[name](cfg)

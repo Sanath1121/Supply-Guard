@@ -5,7 +5,7 @@ data/
 # Outputs and Checkpoints
 outputs/models/
 outputs/figures/
-outputs/results/
+outputs/results/*
 mlruns/
 
 # Python / Environment
@@ -22,3 +22,5 @@ __pycache__/
 .agents/
 .DS_Store
 Thumbs.db
+
+!outputs/results/param_counts.csv

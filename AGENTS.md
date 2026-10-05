@@ -38,3 +38,18 @@ At the conclusion of each phase (once verified, tested, and confirmed complete),
 1. **Mandatory Markdown Report**: Author a completion report saved as `PHASE_<N>.md` at the repository root and mirrored at `docs/PHASE_<N>.md`.
 2. **Atomic Git Commit**: Stage all phase deliverables and create a semantic commit (e.g., `git commit -m "feat(phase-<N>): complete Phase <N> deliverables and report"`).
 3. **Mandatory Git Push**: Immediately execute `git push` to synchronize changes to `origin/main`. Do not begin the next phase until the report is written, committed, and pushed.
+## 8. Testing Integrity & Anti-Tautology Rule
+- **No Test Tautologies:** Never use mock data to validate identical mock logic. Gate tests must explicitly import and execute actual src/ pipeline functions.
+- **Strict Failure/Skip Default:** Unimplemented tests must aise unittest.SkipTest("Not implemented") or self.fail(). Never use empty pass blocks that falsely signal completion.
+- **Production Artifact Safety:** Test scripts (e.g., smoke_test.py) must never overwrite production artifacts. Always pass flags like save_scaler=False or use isolated temporary directories during testing.
+
+## 9. Documentation Honesty (Hallucination Ban)
+- **Zero Inflated Claims:** Markdown completion reports (PHASE_X.md) must exactly match the state of the codebase. Do not claim 100% completion if future phases/gates are only stubbed.
+- **Factual Justifications:** Never invent or guess explanations for data drops, hyperparameter choices, or performance metrics. If the reason is unknown, state it explicitly or ask the user.
+- **Citation Accuracy:** Always use exactly verified citations (e.g., *Farzhana et al., IEEE ICCMC 2025*) based on the source of truth, avoiding generic/hallucinated authors.
+
+## 10. Audit & Review Resolution Protocol
+When assigned to fix issues from a review document (e.g., merged_review_phaseX.md):
+1. **Mandatory Fix Plan:** Output a Fix Plan prioritizing issues (Critical -> Major -> Minor) and explicitly listing all "Open Questions" for the user. **Stop and wait for user approval before coding.**
+2. **Scope Restraint:** Fix *only* the issues listed. Do not refactor unrelated code or accidentally start the next phase.
+3. **Fix Report:** Conclude the cycle by authoring a ix_report_*.md document mapping every issue ID to its final status (Fixed / Skipped) and summarizing file changes.

@@ -89,6 +89,9 @@ def validate_dataset(filepath: str):
     print(f"File Size        : {file_size_mb:.2f} MB")
     print(f"SHA-256 Checksum : {sha}")
     print(f"Pinned Commit    : {PINNED_COMMIT}")
+    
+    expected_sha = "d2e71ae7f55fa70ef498fecb9b6db0c9fd59688f17f8ad3c27c7576f09e76ff3"
+    assert sha == expected_sha, f"SHA-256 mismatch! Expected {expected_sha}, got {sha}"
 
     # 2. Schema check
     df = pd.read_csv(filepath)

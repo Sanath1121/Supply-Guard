@@ -149,3 +149,4 @@ In accordance with Plan A §3 and `AGENTS.md`, persistence $R^2$ was benchmarked
   - `GAP_MAX = 6.0` minutes (segmentation threshold).
   - Explicit column order: `['RI_Supplier1', 'RI_Manufacturer1', 'RI_Distributor1', 'RI_Retailer1']`.
 - **Approved Next Step:** **Phase 2 — Data Pipeline Hardening** (`src/dataset.py`, `src/config.py`).
+

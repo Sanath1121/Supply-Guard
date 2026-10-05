@@ -90,15 +90,18 @@ class TestPhase1EDA(unittest.TestCase):
 
     def test_04_eda_decision_table_gate(self):
         """Test gate evaluation logic for horizon and research question framing."""
-        # Scenario A: persistence at 2 min is 0.98 -> Horizon must be lengthened to >= 10 min
-        raw_persistence_2min = 0.985
-        chosen_horizon_min = 10 if raw_persistence_2min >= 0.95 else 2
+        raw_path = os.path.join(PROJECT_ROOT, "data", "raw", "SCRM_timeSeries_2018_train.csv")
+        if not os.path.exists(raw_path):
+            self.skipTest("Raw data file not downloaded.")
+            
+        df = pd.read_csv(raw_path, usecols=["RI_Distributor1"])
+        series = df["RI_Distributor1"].dropna().values
+        r2_2min = compute_persistence_r2(series, horizon_steps=1)
+        
+        # Scenario A: persistence at 2 min is high -> Horizon must be lengthened to >= 10 min
+        self.assertGreaterEqual(r2_2min, 0.90, "Real persistence at 2 min should be very high")
+        chosen_horizon_min = 10 if r2_2min >= 0.95 else 2
         self.assertEqual(chosen_horizon_min, 10, "High persistence at 2 min requires locking 10-min horizon")
-
-        # Scenario B: cross-echelon correlations are low (corr < 0.30)
-        max_cross_corr = 0.29  # matching the probe finding
-        framing_decision = "REFRAME_RQ2" if max_cross_corr < 0.40 else "HYPOTHESIS_CONFIRMED"
-        self.assertEqual(framing_decision, "REFRAME_RQ2", "Low correlation requires reframing RQ2 as empirical test")
 
 
 if __name__ == "__main__":

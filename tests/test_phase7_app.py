@@ -48,6 +48,7 @@ def build_supply_chain_digraph(node_tiers: dict, upstream_shares: dict) -> nx.Di
 class TestPhase7App(unittest.TestCase):
 
     def setUp(self):
+        raise unittest.SkipTest('Phase not implemented yet')
         self.scaler = MinMaxScaler()
         # Train-like scaler with real-world ranges
         dummy_train = np.array([
@@ -106,3 +107,5 @@ class TestPhase7App(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
