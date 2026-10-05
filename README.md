@@ -1,5 +1,7 @@
 # SupplyGuard: Real-Time Multi-Echelon Supply Chain Risk Alert System
 
+[![SupplyGuard CI](https://github.com/Sanath1121/Supply-Guard/actions/workflows/ci.yml/badge.svg)](https://github.com/Sanath1121/Supply-Guard/actions/workflows/ci.yml)
+
 An empirical re-implementation and spatio-temporal node-level extension of the IEEE ICCMC 2025 hybrid GNN-LSTM model for supply chain risk forecasting with validated gradient attributions.
 
 ## Project Aim
