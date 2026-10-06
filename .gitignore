@@ -24,3 +24,5 @@ __pycache__/
 Thumbs.db
 
 !outputs/results/param_counts.csv
+!outputs/results/training_summary.csv
+!outputs/results/*_loss.csv
