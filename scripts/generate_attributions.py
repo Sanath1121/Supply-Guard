@@ -1,5 +1,6 @@
 import os
 import random
+import tempfile
 import torch
 import numpy as np
 import pandas as pd
@@ -11,7 +12,15 @@ from src.explainability import RiskExplainer, upstream_share, narrate
 from training.train import ckpt_path
 
 def main():
+    # Set explicit random seeds for reproducible attribution analysis
+    random.seed(42)
+    np.random.seed(42)
+    torch.manual_seed(42)
+
     cfg = Config()
+    # Defensively redirect SCALER_PATH to prevent touching production scaler
+    cfg.SCALER_PATH = os.path.join(tempfile.gettempdir(), "supplyguard_temp_scaler.joblib")
+
     print("Loading datasets...")
     tr, va, te, scaler, info = build_datasets(cfg, save_scaler=False)
     
@@ -80,7 +89,18 @@ def main():
         res_del_rand = explainer_dir.explain(seq_del_rand, target_node, delta_mode=True)
         delta_pred_del_rand = res_del_rand["predicted_risk"] - res_del_rand["baseline_risk"]
         drop_rand = abs(delta_pred_orig - delta_pred_del_rand)
-        
+
+        # Multi-feature benchmark: compute mean drop across all non-top features
+        other_drops = []
+        for f in range(5):
+            if f != top_feat:
+                seq_del_f = seq.clone()
+                seq_del_f[:, f] = baseline[f]
+                res_del_f = explainer_dir.explain(seq_del_f, target_node, delta_mode=True)
+                delta_pred_del_f = res_del_f["predicted_risk"] - res_del_f["baseline_risk"]
+                other_drops.append(abs(delta_pred_orig - delta_pred_del_f))
+        drop_mean_other = float(np.mean(other_drops))
+
         # 5. Stability (compare attribution to next window i+1)
         if i + 1 < len(te.sequences):
             seq_next = te.sequences[i+1]
@@ -88,7 +108,7 @@ def main():
             stability = np.linalg.norm(res_dir_delta["attribution"] - res_next["attribution"])
         else:
             stability = np.nan
-            
+
         results.append({
             "window_index": i,
             "target_node": target_node,
@@ -97,6 +117,7 @@ def main():
             "upstream_share_sym": up_sym,
             "deletion_drop_top": drop_top,
             "deletion_drop_rand": drop_rand,
+            "deletion_drop_mean_other": drop_mean_other,
             "deletion_test_passed": drop_top > drop_rand,
             "stability_l2": stability,
             "narrative": narrate(res_dir_delta, seq_len=cfg.SEQ_LEN)
