@@ -91,7 +91,10 @@ class LSTMBaseline(nn.Module):
 
         self.cfg = cfg
         self.residual = getattr(cfg, "RESIDUAL", True)
-        self.lstm = nn.LSTM(cfg.NUM_INPUT_FEATURES, cfg.LSTM_HIDDEN_DIM, cfg.LSTM_NUM_LAYERS, batch_first=True,
+        
+        self.proj = nn.Linear(cfg.NUM_INPUT_FEATURES, cfg.GCN_HIDDEN_DIM)
+        
+        self.lstm = nn.LSTM(cfg.GCN_HIDDEN_DIM, cfg.LSTM_HIDDEN_DIM, cfg.LSTM_NUM_LAYERS, batch_first=True,
                             dropout=cfg.LSTM_DROPOUT if cfg.LSTM_NUM_LAYERS > 1 else 0.0)
         self.head = nn.Sequential(nn.Linear(cfg.LSTM_HIDDEN_DIM, cfg.HEAD_HIDDEN), nn.ReLU(),
                                   nn.Dropout(cfg.FC_DROPOUT), nn.Linear(cfg.HEAD_HIDDEN, cfg.NUM_NODES))
@@ -99,7 +102,8 @@ class LSTMBaseline(nn.Module):
             nn.init.zeros_(self.head[-1].weight); nn.init.zeros_(self.head[-1].bias)
 
     def forward(self, seq: torch.Tensor) -> torch.Tensor:
-        _, (h_n, _) = self.lstm(seq)
+        x = torch.relu(self.proj(seq))
+        _, (h_n, _) = self.lstm(x)
         out = self.head(h_n[-1])
         return seq[:, -1, :self.cfg.NUM_NODES] + out if self.residual else out
 
