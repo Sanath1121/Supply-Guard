@@ -40,7 +40,7 @@ class TestPhase6Explainability(unittest.TestCase):
 
     def test_01_integrated_gradients_completeness(self):
         """Verify Integrated Gradients satisfies the Completeness Axiom within 0.05 on production model."""
-        res = self.explainer.explain(self.sample_x, target_node=3, delta_mode=False)
+        res = self.explainer.explain(self.sample_x, target_node=3, residual_delta=False)
         self.assertEqual(res["attribution"].shape, (10, 5))
         self.assertLess(abs(res["completeness_gap"]), 0.05)
         self.assertIn("feature_importance", res)
@@ -48,8 +48,8 @@ class TestPhase6Explainability(unittest.TestCase):
 
     def test_02_delta_attribution_prevents_persistence_bias(self):
         """Verify Delta-attribution isolates network adjustment from y_t with completeness gap < 0.05."""
-        res_full = self.explainer.explain(self.sample_x, target_node=3, delta_mode=False)
-        res_delta = self.explainer.explain(self.sample_x, target_node=3, delta_mode=True)
+        res_full = self.explainer.explain(self.sample_x, target_node=3, residual_delta=False)
+        res_delta = self.explainer.explain(self.sample_x, target_node=3, residual_delta=True)
 
         self.assertLess(abs(res_delta["completeness_gap"]), 0.05)
         self.assertEqual(res_delta["attribution"].shape, (10, 5))
@@ -57,7 +57,7 @@ class TestPhase6Explainability(unittest.TestCase):
 
     def test_03_deletion_test_validation(self):
         """Verify feature deletion: masking top-attributed feature degrades forecast more than least-attributed."""
-        res = self.explainer.explain(self.sample_x, target_node=3, delta_mode=False)
+        res = self.explainer.explain(self.sample_x, target_node=3, residual_delta=False)
         feat_imp = np.array(res["feature_importance"])
         top_f = int(np.argmax(feat_imp))
         min_f = int(np.argmin(feat_imp))
@@ -83,19 +83,19 @@ class TestPhase6Explainability(unittest.TestCase):
 
     def test_04_upstream_share_bounds_and_structure(self):
         """Verify upstream share metric obeys [0, 1] bounds and hierarchical chain topology."""
-        res_retailer = self.explainer.explain(self.sample_x, target_node=3, delta_mode=True)
+        res_retailer = self.explainer.explain(self.sample_x, target_node=3, residual_delta=True)
         up_share_ret = upstream_share(res_retailer)
         self.assertGreaterEqual(up_share_ret, 0.0)
         self.assertLessEqual(up_share_ret, 1.0)
 
         # Supplier node (target=0) has no upstream echelons in S -> M -> D -> R
-        res_supplier = self.explainer.explain(self.sample_x, target_node=0, delta_mode=True)
+        res_supplier = self.explainer.explain(self.sample_x, target_node=0, residual_delta=True)
         up_share_sup = upstream_share(res_supplier)
         self.assertEqual(up_share_sup, 0.0)
 
     def test_05_narrative_integrity_and_causal_claim_prohibition(self):
         """Verify narrate() produces valid English and strictly forbids the phrase 'root cause'."""
-        res = self.explainer.explain(self.sample_x, target_node=3, delta_mode=True)
+        res = self.explainer.explain(self.sample_x, target_node=3, residual_delta=True)
         narrative = narrate(res, seq_len=self.cfg.SEQ_LEN)
 
         self.assertIsInstance(narrative, str)

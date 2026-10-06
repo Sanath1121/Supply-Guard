@@ -58,15 +58,15 @@ def main():
         seq = te.sequences[i]
         
         # 1. Normal IG
-        res_dir = explainer_dir.explain(seq, target_node, delta_mode=False)
-        res_sym = explainer_sym.explain(seq, target_node, delta_mode=False)
+        res_dir = explainer_dir.explain(seq, target_node, residual_delta=False)
+        res_sym = explainer_sym.explain(seq, target_node, residual_delta=False)
         
         # 2. Delta IG
-        res_dir_delta = explainer_dir.explain(seq, target_node, delta_mode=True)
+        res_dir_delta = explainer_dir.explain(seq, target_node, residual_delta=True)
         
         # 3. Upstream share (on Normal IG, or Delta IG? Plan implies on Delta IG, let's use delta)
         up_dir = upstream_share(res_dir_delta)
-        up_sym = upstream_share(explainer_sym.explain(seq, target_node, delta_mode=True))
+        up_sym = upstream_share(explainer_sym.explain(seq, target_node, residual_delta=True))
         
         # 4. Deletion test vs Random on Delta IG
         feat_imp = np.array(res_dir_delta["feature_importance"])
@@ -79,14 +79,14 @@ def main():
         # Mask top feature
         seq_del_top = seq.clone()
         seq_del_top[:, top_feat] = baseline[top_feat]
-        res_del_top = explainer_dir.explain(seq_del_top, target_node, delta_mode=True)
+        res_del_top = explainer_dir.explain(seq_del_top, target_node, residual_delta=True)
         delta_pred_del_top = res_del_top["predicted_risk"] - res_del_top["baseline_risk"]
         drop_top = abs(delta_pred_orig - delta_pred_del_top)
         
         # Mask random feature
         seq_del_rand = seq.clone()
         seq_del_rand[:, rand_feat] = baseline[rand_feat]
-        res_del_rand = explainer_dir.explain(seq_del_rand, target_node, delta_mode=True)
+        res_del_rand = explainer_dir.explain(seq_del_rand, target_node, residual_delta=True)
         delta_pred_del_rand = res_del_rand["predicted_risk"] - res_del_rand["baseline_risk"]
         drop_rand = abs(delta_pred_orig - delta_pred_del_rand)
 
@@ -96,7 +96,7 @@ def main():
             if f != top_feat:
                 seq_del_f = seq.clone()
                 seq_del_f[:, f] = baseline[f]
-                res_del_f = explainer_dir.explain(seq_del_f, target_node, delta_mode=True)
+                res_del_f = explainer_dir.explain(seq_del_f, target_node, residual_delta=True)
                 delta_pred_del_f = res_del_f["predicted_risk"] - res_del_f["baseline_risk"]
                 other_drops.append(abs(delta_pred_orig - delta_pred_del_f))
         drop_mean_other = float(np.mean(other_drops))
@@ -104,7 +104,7 @@ def main():
         # 5. Stability (compare attribution to next window i+1)
         if i + 1 < len(te.sequences):
             seq_next = te.sequences[i+1]
-            res_next = explainer_dir.explain(seq_next, target_node, delta_mode=True)
+            res_next = explainer_dir.explain(seq_next, target_node, residual_delta=True)
             stability = np.linalg.norm(res_dir_delta["attribution"] - res_next["attribution"])
         else:
             stability = np.nan

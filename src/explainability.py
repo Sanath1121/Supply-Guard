@@ -28,7 +28,7 @@ class RiskExplainer:
         b = self.baseline
         return b.expand_as(seq).clone() if b.dim() == 1 else b.clone()
 
-    def explain(self, seq: torch.Tensor, target_node: int, delta_mode: bool = False) -> dict:
+    def explain(self, seq: torch.Tensor, target_node: int, residual_delta: bool = False) -> dict:
         """seq: [L, F] one window. Returns signed attributions [L, F] plus summaries."""
         with torch.enable_grad():
             x = seq.detach().float()
@@ -36,7 +36,7 @@ class RiskExplainer:
             alphas = torch.linspace(0.0, 1.0, self.steps + 1)[1:].view(-1, 1, 1)   # right Riemann sum
             path = (base + alphas * (x - base)).requires_grad_(True)               # [S, L, F]
             out = self.model(path)[:, target_node]
-            if delta_mode:
+            if residual_delta:
                 out = out - path[:, -1, target_node]
             out = out.sum()
             grads, = torch.autograd.grad(out, path)
@@ -45,7 +45,7 @@ class RiskExplainer:
         with torch.no_grad():
             f_x = float(self.model(x.unsqueeze(0))[0, target_node])
             f_b = float(self.model(base.unsqueeze(0))[0, target_node])
-            if delta_mode:
+            if residual_delta:
                 f_x -= float(x[-1, target_node])
                 f_b -= float(base[-1, target_node])
 
@@ -65,8 +65,8 @@ class RiskExplainer:
             "total_abs_attribution": float(total),                # magnitude, not just shares
         }
 
-    def explain_all(self, seq: torch.Tensor, delta_mode: bool = False) -> list:
-        return [self.explain(seq, i, delta_mode=delta_mode) for i in range(len(NODE_NAMES))]
+    def explain_all(self, seq: torch.Tensor, residual_delta: bool = False) -> list:
+        return [self.explain(seq, i, residual_delta=residual_delta) for i in range(len(NODE_NAMES))]
 
 
 def upstream_share(result: dict) -> float:
