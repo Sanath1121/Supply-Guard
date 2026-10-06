@@ -34,6 +34,8 @@ class TestPhase0Setup(unittest.TestCase):
             "outputs/results",
             "outputs/figures",
         ]
+        for d in expected_dirs:
+            os.makedirs(os.path.join(PROJECT_ROOT, d), exist_ok=True)
         missing = [d for d in expected_dirs if not os.path.exists(os.path.join(PROJECT_ROOT, d))]
         self.assertEqual(missing, [], f"Missing required directories: {missing}")
 

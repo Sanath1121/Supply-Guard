@@ -1,12 +1,12 @@
 # SupplyGuard — Comprehensive Project Progress & Quality Assurance Report
 
 **Project Title:** SupplyGuard — Real-Time Multi-Echelon Supply Chain Risk Alert System  
-**Academic Basis:** Hybrid GNN-LSTM Spatiotemporal Model (IEEE ICCMC 2025 DOI: 10.1109/ICCMC65190.2025.11140739)  
+**Academic Basis:** Hybrid GNN-LSTM Spatiotemporal Model (Farzhana I., Dev Harris L., Shreyas S., 8th ICCMC 2025, DOI: 10.1109/ICCMC65190.2025.11140739)  
 **Dataset:** Banerjee et al. (2019), Mendeley Data V2 (CC BY 4.0, DOI: 10.17632/gystn6d3r4.2)  
 **Evaluation Target:** Project Manager / Faculty Advisor / Project Review Committee  
 **Reporting Date:** October 6, 2026  
 **Current Milestone:** Phase 4 Complete & Verified (Gates 0, 1, 2, 3, 4 Passed 100% — 26/26 Gate Checks, 20 Trained Models Verified)  
-**Phase 7 Architectural Baseline:** Formally Established & Documented (Streamlit ADR & Frontend Spec)  
+**Phase 7 Architectural Baseline:** Specification Only (Streamlit ADR & Frontend Spec Formally Established)  
 **Next Milestone:** Phase 5 (Multi-Seed Model Evaluation, Benchmarking & Statistical Verification)  
 
 ---
@@ -15,17 +15,17 @@
 
 **SupplyGuard** is an advanced spatiotemporal machine learning system designed to forecast and explain multi-echelon supply chain disruption risks across four interdependent tiers: **Supplier $\to$ Manufacturer $\to$ Distributor $\to$ Retailer**. The project re-implements the IEEE ICCMC 2025 hybrid GCN-LSTM paper as a rigorous baseline, and substantially extends it into an echelon-level directed spatiotemporal architecture with residual persistence forecasting, validated gradient explainability (Integrated Gradients), and an interactive web dashboard.
 
-As of October 6, 2026, the project has achieved **62.5% completion of the core implementation plan** (Phases 0, 1, 2, 3, and 4 fully completed, empirically trained, and verified; Phase 7 frontend specification formally locked; Phases 5, 6, and 8 scheduled).
+As of October 6, 2026, **Phases 0-4 of 9 are complete** (Phases 0, 1, 2, 3, and 4 fully completed, empirically trained, and verified; Phase 7 specification only; Phases 5, 6, and 8 scheduled).
 
 ### High-Level Status Dashboard
-- **Overall Plan Progress:** **62.5% Complete** (5 of 8 core phases fully verified; Phase 7 architectural baseline locked; Phases 5–6 and 8 scheduled).
+- **Overall Plan Progress:** **Phases 0-4 of 9 complete** (Phases 0-4 fully verified; Phase 7 specification only; Phases 5–6 and 8 scheduled).
 - **Automated Gate Tests:** **100% Pass Rate** across Gates 0, 1, 2, 3, and 4 (26/26 gate checks passing in 46.8s via `tests/run_phase_tests.py --up-to 4`).
 - **Adversarial & Smoke Suites:** **100% Pass Rate** across 15 test suites and harnesses (**110+ formal test cases and validation assertions passed**, 0 regressions, 0 failures).
 - **Physical Model Checkpoint Audit:** **All 20 PyTorch checkpoints (`.pt`)** across 4 architectures and 5 seeds verified locally in PyTorch with `weights_only=True`, zero NaNs, and exact tensor shapes (`[B, 4]` and `[B]`).
 - **Cloud GPU Training Execution:** Complete 20-run training grid successfully executed on an **NVIDIA A100 GPU (40GB VRAM)** on Google Colab (2.33 hours cumulative GPU time, 685 total epochs logged).
-- **Empirical Superiority of Proposed Model:** The proposed directed architecture (`st_gcn_lstm_dir`) achieved the lowest mean validation loss (**0.000904 $\pm$ 0.000002**), statistically outperforming pure `lstm` (**0.000941 $\pm$ 0.000014**) and symmetric `st_gcn_lstm_sym` (**0.001145 $\pm$ 0.000252**) with exceptionally tight seed variance.
+- **Validation Loss Profile of Evaluated Architectures:** On validation loss, the proposed directed architecture (`st_gcn_lstm_dir`) recorded the lowest mean validation loss (**0.000904 $\pm$ 0.000002**), compared to pure `lstm` (**0.000941 $\pm$ 0.000014**) and symmetric `st_gcn_lstm_sym` (**0.001145 $\pm$ 0.000252** headline 5-seed mean; **0.000962 $\pm$ 0.000008** on converged seeds 42, 45, 46). Formal comparative claims and statistical significance are strictly reserved for Phase 5 test set evaluation.
 - **Data Engineering Yield:** 592,599 clean records retained (91.17% usable yield) across 1,198 contiguous segments, with 100% data leakage prevention and zero cross-gap sequence bridging.
-- **Mathematical Invariants Proven:** 2-hop cross-echelon gradient propagation ($>10^{-7}$), DAG nilpotency ($A^4=0$), normalized Laplacian boundedness ($\lambda \in [0, 2]$), residual persistence identity recovery ($\max |\Delta|=0.0$), and continuous unbounded regression outputs.
+- **Mathematical Invariants Proven:** 2-hop cross-echelon gradient propagation ($>10^{-7}$), DAG nilpotency ($A^4=0$), renormalised adjacency matrix boundedness ($\lambda \in [-1, 1]$), residual persistence identity recovery ($\max |\Delta|=0.0$), and continuous unbounded regression outputs.
 
 ---
 
@@ -103,6 +103,7 @@ To guarantee reproducibility, academic defensibility, and seamless execution, fi
     2. **Sigmoid Removal from Paper Hybrid Baseline:** Removed `nn.Sigmoid()` from `PaperHybridOverall`. Output is now a continuous, unbounded scalar prediction $[B]$, eliminating artificial gradient saturation.
     3. **Core Proposed Model (`STGCNLSTM`):** 2-layer `GraphConv` applied at *every* time step $\to$ learnable echelon embeddings $\to$ shared per-node temporal LSTM $\to$ residual projection head ($\hat{y} = y_t + \Delta$).
     4. **Directed Graph Convolutions:** Decoupled relational message passing into separate downstream goods flow ($A_{down}$) and upstream feedback ($A_{up}$) weights (+2,176 parameters mathematically proven).
+    5. **Standalone GCN Baseline Omission:** A standalone pure GCN baseline was skipped per design; Plan A explicitly superseded NEW_AIM.md here because pure GCN without temporal recurrence cannot process sequential multi-step windows without artificial spatial flattening.
   - Parameter Accounting (`param_counts.csv`): LSTM: 53.6k, Paper Hybrid: 57.7k, STGCN-sym: 61.7k, STGCN-dir: 63.9k.
   - **Gate 3 Tests:** 6/6 passed in 0.45s; Adversarial Suite 3: 8/8 passed.
 
@@ -116,14 +117,14 @@ To guarantee reproducibility, academic defensibility, and seamless execution, fi
     - Uniform loss calculation via MSE across node targets and TRI targets.
     - Gradient norm clipping at `GRAD_CLIP = 1.0` and early stopping with `PATIENCE = 10`.
   - `notebooks/colab_train.ipynb`:
-    - End-to-end automated notebook with GPU diagnostics, repo cloning, pinned dependency setup, dataset download/verification, and automated Google Drive backup + browser download of `outputs.zip`.
+    - End-to-end automated notebook with GPU diagnostics, repo cloning, dependency setup via `requirements.txt` (unpinned `torch>=2.0.0`; exact environment recorded in UTF-8 `requirements.lock`), dataset download/verification, and automated Google Drive backup + browser download of `outputs.zip`.
   - **Colab GPU Execution Completed:**
-    - Executed on an **NVIDIA A100 GPU (40GB VRAM)** on Google Colab with `--batch-size 256`.
+    - Executed on an **NVIDIA A100 GPU (40GB VRAM)** on Google Colab with `--batch-size 256` from commit `3d90be6`.
     - Total training duration: **2.33 hours (8,388 seconds)** across 20 individual model runs (685 total epochs logged).
-    - All 20 model checkpoints (`.pt`) and loss histories (`.csv`) retrieved, extracted, and verified locally.
+    - All 20 model checkpoints (`.pt`) and loss histories (`.csv`) retrieved, extracted, cryptographically verified (`checkpoints.sha256`), and tested locally with `weights_only=True`.
   - **Gate 4 Tests:** 7/7 passed in 5.31s; Adversarial Suites (Challenger 1 & 2): 21/21 passed; 20-Checkpoint PyTorch Audit: 20/20 passed.
 
-### Phase 7 Architectural Foundation (Status: ✅ COMPLETED & SPECIFIED)
+### Phase 7 Architectural Foundation (Status: 📋 SPECIFICATION ONLY)
 - **Objective:** Produce the Architectural Decision Record (ADR) and developer handoff specification for the frontend dashboard.
 - **Key Deliverables:**
   - Comprehensive 25 KB specification: `docs/PHASE_7_FRONTEND_CONTEXT_AND_STREAMLIT_DECISION.md`.
@@ -143,15 +144,17 @@ The complete 5-seed multi-model training grid was executed on Google Colab using
 |---|---|---|---|---|---|---|---|
 | **`lstm`** (Temporal Baseline) | 0.000930 | 0.000929 | 0.000956 | 0.000958 | 0.000934 | **0.000941 $\pm$ 0.000014** | 370.4s |
 | **`paper_overall`** (ICCMC 2025) | 0.000256 | 0.000246 | 0.000248 | 0.000247 | 0.000247 | **0.000249 $\pm$ 0.000004** | 418.5s |
-| **`st_gcn_lstm_sym`** (Symmetric) | 0.000957 | 0.001421 | 0.001421 | 0.000958 | 0.000971 | **0.001145 $\pm$ 0.000252** | 416.7s |
+| **`st_gcn_lstm_sym`** (Symmetric) | 0.000957 | 0.001421 | 0.001421 | 0.000958 | 0.000971 | **0.001145 $\pm$ 0.000252** *(all 5)*<br>*(converged 42/45/46: **0.000962 $\pm$ 0.000008**)* | 416.7s |
 | **`st_gcn_lstm_dir`** (Proposed) | 0.000905 | 0.000901 | 0.000904 | 0.000903 | 0.000906 | **0.000904 $\pm$ 0.000002** | 472.1s |
 
 ### 4.2 Key Scientific Insights from Training
-1. **Proposed Directed Model Wins on Validation Loss:**
-   - `st_gcn_lstm_dir` achieved a mean validation loss of **0.000904**, clearly outperforming pure `lstm` (**0.000941**) and symmetric `st_gcn_lstm_sym` (**0.001145**).
-   - The standard deviation across seeds for `st_gcn_lstm_dir` is exceptionally tight ($\pm 0.000002$), indicating high optimization stability.
-2. **Directed vs. Symmetric Separation:**
-   - Decoupling forward goods flow ($A_{down}$) from upstream feedback ($A_{up}$) prevents relational blurring; `st_gcn_lstm_sym` suffered from seed instability (variance up to $\pm 0.000252$).
+1. **Directed Architecture Validation Loss:**
+   - On the validation split, `st_gcn_lstm_dir` recorded the lowest mean validation loss (**0.000904 $\pm$ 0.000002**), compared to pure `lstm` (**0.000941 $\pm$ 0.000014**) and symmetric `st_gcn_lstm_sym`.
+   - The variance across all 5 seeds for `st_gcn_lstm_dir` was exceptionally tight ($\pm 0.000002$). Formal comparative claims and statistical significance are strictly reserved for Phase 5 test set evaluation.
+2. **Symmetric Graph Seed Collapse & Option A Policy:**
+   - Seeds 43 and 44 of `st_gcn_lstm_sym` collapsed to the analytical persistence solution ($MSE \approx 0.001421$, matching persistence within $10^{-8}$; mean $||\Delta|| < 0.0005$ vs $0.013$ for converged runs).
+   - Read-only parameter and gradient diagnostics confirmed that under symmetric graph aggregation, initial random updates for seeds 43 and 44 failed to escape the flat persistence identity saddle point ($\Delta \approx 0$), leading early stopping to halt training at epochs 17 and 11.
+   - Adopting **Option A**, all 20 runs are preserved without retraining. The 5-seed headline mean (**0.001145**) is reported alongside the converged 3-seed mean (**0.000962**).
 3. **Paper Baseline Loss Profile:**
    - `paper_overall` predicts a single scalar (TRI, mean across nodes), naturally resulting in a lower variance target space (loss ~0.000249).
 4. **Execution Durability:**
@@ -255,7 +258,7 @@ Supply_chain_alret_system/
 │   ├── __init__.py
 │   ├── config.py                    # Centralized hyperparameter configuration
 │   ├── dataset.py                   # Hardened segmentation & windowing pipeline
-│   ├── graph_builder.py             # Supply chain adjacency & Laplacian matrices
+│   ├── graph_builder.py             # Supply chain adjacency & renormalised adjacency matrices
 │   ├── explainability.py            # Integrated Gradients & Delta-attribution
 │   └── models/
 │       ├── __init__.py              # Clean package-level model exports
@@ -282,12 +285,14 @@ Supply_chain_alret_system/
 │   ├── 01_EDA.ipynb                 # Fully executed Phase 1 EDA notebook
 │   └── colab_train.ipynb            # Verified Colab GPU training notebook
 ├── scripts/
-│   └── count_parameters.py          # Parameter accounting utility script
+│   ├── count_parameters.py          # Parameter accounting utility script
+│   ├── verify_checkpoints.py        # 20-checkpoint strict bitwise & validation loss audit
+│   └── diagnose_sym_collapse.py     # Diagnostic script for symmetric graph collapse analysis
 ├── training/
 │   └── train.py                     # Production multi-model multi-seed training engine
 ├── AGENTS.md                        # AI coding agent guard rails and rules
 ├── requirements.txt                 # Project dependencies
-├── requirements.lock                # Pinned environment versions
+├── requirements.lock                # Pinned environment versions (clean UTF-8)
 └── setup_and_download.py            # Automated download & validation script
 ```
 
@@ -314,13 +319,15 @@ Supply_chain_alret_system/
 With Phase 4 complete, verified, and all 20 model checkpoints residing locally, the project transitions immediately to **Phase 5 (Model Evaluation & Benchmarking)**:
 
 1. **Implement Evaluation Suite (`training/evaluate.py`):**
-   - Evaluate all 20 trained deep learning models on the held-out test partition ($N_{\text{test}} \approx 59,260$ windows).
+   - Evaluate all 20 trained deep learning models on the held-out test partition ($N_{\text{test}} = 57,875$ windows). Development and validation sanity checks will execute against `--split val` (57,817 windows) first; the test split will be evaluated once at the conclusion.
    - Implement benchmark baselines:
      - **Naive Persistence:** $\hat{y}_{t+5} = y_t$
-     - **Ridge-AR(10):** Autoregressive L2-regularized linear baseline
-   - Compute metrics across test partition: Mean Absolute Error ($MAE$), Root Mean Squared Error ($RMSE$), and Coefficient of Determination ($R^2$).
+     - **Ridge-AR(10):** Autoregressive L2-regularized linear baseline with $\alpha$ tuned strictly on the validation set.
+   - Compute metrics across test partition: Mean Absolute Error ($MAE$), Root Mean Squared Error ($RMSE$), Coefficient of Determination ($R^2$), per-node skill score relative to persistence, and $R^2$ on $\Delta y$.
+   - **TRI Reporting Standard:** Report scaled TRI for all models (mean of node predictions for node models; persistence TRI too). Raw-unit TRI = mean of raw node predictions; raw TRI is never derived from `paper_overall`'s scaled output.
+   - **Ablation Scope:** Identity and complete-graph graph ablations are formally deferred to Plan B post-submission.
 2. **Multi-Seed Aggregation ($mean \pm std$):**
-   - Aggregate performance across seeds `42, 43, 44, 45, 46` for publication-grade error bounds per AGENTS.md Rule 5.
+   - Aggregate performance across seeds `42, 43, 44, 45, 46` for publication-grade error bounds per AGENTS.md Rule 5 (Option A: report 5-seed headline and 3-seed converged mean for `st_gcn_lstm_sym`).
    - Generate `outputs/results/overall_metrics.csv` and `outputs/results/node_metrics.csv`.
 3. **Echelon Severity Confusion Matrix:**
    - Categorize predicted vs. actual test risks into Low, Medium, High terciles to assess operational alert precision.

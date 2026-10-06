@@ -28,7 +28,7 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from src.config import Config
-from src.dataset import load_clean_frame, build_datasets, segment_and_window
+from src.dataset import load_clean_frame, build_datasets
 
 
 def create_clean_cadence_df(n_rows: int = 1000, start_time: str = "2018-01-01 00:00:00", seed: int = 42) -> pd.DataFrame:
@@ -50,20 +50,12 @@ class Challenger2AdversarialTests(unittest.TestCase):
     """Empirical adversarial test suite by Challenger 2."""
 
     def setUp(self):
-        self.tmp_dir = os.path.join(PROJECT_ROOT, "data", "raw", "_challenger2_tmp")
-        os.makedirs(self.tmp_dir, exist_ok=True)
+        import tempfile
+        self.tmp_dir = tempfile.mkdtemp()
 
     def tearDown(self):
-        if os.path.exists(self.tmp_dir):
-            for f in os.listdir(self.tmp_dir):
-                try:
-                    os.remove(os.path.join(self.tmp_dir, f))
-                except OSError:
-                    pass
-            try:
-                os.rmdir(self.tmp_dir)
-            except OSError:
-                pass
+        import shutil
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)
 
     # =========================================================================
     # TASK 1.1: Empirical Test of Scaler Leakage
@@ -178,7 +170,8 @@ class Challenger2AdversarialTests(unittest.TestCase):
 
         cfg = Config()
         cfg.RAW_DATA_PATH = csv_path
-        tr, va, te, _, info = build_datasets(cfg)
+        cfg.SCALER_PATH = os.path.join(self.tmp_dir, "test_target_isolation_scaler.joblib")
+        tr, va, te, _, info = build_datasets(cfg, save_scaler=False)
 
         self.assertGreater(len(tr), 0, "Train dataset must not be empty")
         self.assertGreater(len(va), 0, "Val dataset must not be empty")
@@ -249,8 +242,9 @@ class Challenger2AdversarialTests(unittest.TestCase):
 
         cfg = Config()
         cfg.RAW_DATA_PATH = csv_path
+        cfg.SCALER_PATH = os.path.join(self.tmp_dir, "test_context_borrowing_scaler.joblib")
         clean_df = load_clean_frame(cfg)
-        tr, va, te, _, info = build_datasets(cfg)
+        tr, va, te, _, info = build_datasets(cfg, save_scaler=False)
 
         n_total = len(clean_df)
         n_tr = int(n_total * cfg.TRAIN_RATIO)
@@ -458,8 +452,9 @@ class Challenger2AdversarialTests(unittest.TestCase):
         cfg = Config()
         cfg.RAW_DATA_PATH = raw_path
         cfg.MAX_SAMPLES = None
+        cfg.SCALER_PATH = os.path.join(self.tmp_dir, "prod_test_scaler.joblib")
 
-        tr, va, te, scaler, info = build_datasets(cfg)
+        tr, va, te, scaler, info = build_datasets(cfg, save_scaler=False)
 
         # 1. Exact Row Conservation
         loss = info["row_loss"]

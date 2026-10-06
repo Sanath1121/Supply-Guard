@@ -168,13 +168,17 @@ The complete 5-seed multi-model training grid was successfully executed on Googl
 |---|---|---|---|---|---|---|---|
 | **`lstm`** | 0.000930 | 0.000929 | 0.000956 | 0.000958 | 0.000934 | **0.000941 $\pm$ 0.000014** | 370.4s |
 | **`paper_overall`** | 0.000256 | 0.000246 | 0.000248 | 0.000247 | 0.000247 | **0.000249 $\pm$ 0.000004** | 418.5s |
-| **`st_gcn_lstm_sym`** | 0.000957 | 0.001421 | 0.001421 | 0.000958 | 0.000971 | **0.001145 $\pm$ 0.000252** | 416.7s |
+| **`st_gcn_lstm_sym`** | 0.000957 | 0.001421 | 0.001421 | 0.000958 | 0.000971 | **0.001145 $\pm$ 0.000252** *(all 5)*<br>*(converged 42/45/46: **0.000962 $\pm$ 0.000008**)* | 416.7s |
 | **`st_gcn_lstm_dir`** | 0.000905 | 0.000901 | 0.000904 | 0.000903 | 0.000906 | **0.000904 $\pm$ 0.000002** | 472.1s |
 
 ### 7.2 Key Training Observations
 1. **Convergence Stability:** All 20 models reached stable convergence without gradient explosion or NaN loss values, confirming the effectiveness of gradient norm clipping (`GRAD_CLIP = 1.0`).
-2. **Directed Model Outperforms LSTM on Validation Loss:**
-   - `st_gcn_lstm_dir` achieved a mean validation loss of **0.000904** compared to **0.000941** for `lstm`.
-   - The standard deviation across seeds for `st_gcn_lstm_dir` is exceptionally tight ($\pm 0.000002$), indicating high training consistency.
-3. **Paper Baseline Loss Profile:** `paper_overall` targets scalar Total Risk Index (TRI, the mean of 4 nodes), resulting in an expected lower variance target space (mean val loss 0.000249).
-4. **Execution Duration:** Total cumulative GPU training time across all 20 runs was **2.33 hours** (8,388 seconds), with an average runtime of ~7 minutes per run. All checkpoints were preserved with zero corruption.
+2. **Directed Model Validation Loss Profile:**
+   - On the validation split, `st_gcn_lstm_dir` achieved the lowest mean validation loss of **0.000904 $\pm$ 0.000002** compared to **0.000941 $\pm$ 0.000014** for `lstm`.
+   - The standard deviation across seeds for `st_gcn_lstm_dir` is exceptionally tight ($\pm 0.000002$), indicating high training consistency. Formal comparative claims and statistical significance testing are strictly reserved for Phase 5 test set evaluation.
+3. **Symmetric Graph Seed Collapse & Option A Policy:**
+   - Seeds 43 and 44 of `st_gcn_lstm_sym` collapsed to the analytical persistence baseline ($MSE \approx 0.001421$, matching persistence within $10^{-8}$; mean $||\Delta|| < 0.0005$ vs $0.013$ for converged runs).
+   - Read-only parameter and gradient diagnostics confirmed that under symmetric graph aggregation, initial random updates for seeds 43 and 44 failed to escape the flat persistence identity saddle point ($\Delta \approx 0$), leading early stopping to halt training at epochs 17 and 11.
+   - Adopting **Option A**, all 20 runs are preserved without retraining. The 5-seed headline mean (**0.001145**) is reported alongside the converged 3-seed mean (**0.000962**).
+4. **Paper Baseline Loss Profile:** `paper_overall` targets scalar Total Risk Index (TRI, the mean of 4 nodes), resulting in an expected lower variance target space (mean val loss 0.000249).
+5. **Execution Duration:** Total cumulative GPU training time across all 20 runs was **2.33 hours** (8,388 seconds), with an average runtime of ~7 minutes per run. All checkpoints were preserved with zero corruption.

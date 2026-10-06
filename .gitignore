@@ -3,9 +3,17 @@ data/
 *.csv
 
 # Outputs and Checkpoints
-outputs/models/
-outputs/figures/
+outputs/models/*
+!outputs/models/*.pt
+!outputs/models/scaler.joblib
+!outputs/models/checkpoints.sha256
+!outputs/models/checkpoints.sha256.bak
+outputs/figures/*
 outputs/results/*
+!outputs/results/.training_completed
+!outputs/results/param_counts.csv
+!outputs/results/training_summary.csv
+!outputs/results/*_loss.csv
 mlruns/
 
 # Python / Environment

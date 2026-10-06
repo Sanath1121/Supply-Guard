@@ -26,6 +26,10 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 from src.config import Config
 from src.dataset import SupplyChainDataset, build_datasets
 from src.models.st_gcn_lstm import build_model
@@ -89,7 +93,13 @@ def parse_args(args=None):
         action="store_true",
         help="Bypass CPU safety guardrail for local multi-seed execution.",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force overwrite of existing model checkpoints and result CSVs.",
+    )
     return parser.parse_args(args)
+
 
 
 def resolve_device(requested_device: str) -> torch.device:
@@ -185,7 +195,9 @@ def train_one(cfg, name: str, seed: int, tr, va, device="cpu", log=print) -> Tup
 
         if vl < best - 1e-7:
             best, bad = vl, 0
-            torch.save(model.state_dict(), path)
+            tmp_path = path + ".tmp"
+            torch.save(model.state_dict(), tmp_path)
+            os.replace(tmp_path, path)
         else:
             bad += 1
             if bad >= patience:
@@ -196,7 +208,7 @@ def train_one(cfg, name: str, seed: int, tr, va, device="cpu", log=print) -> Tup
 
 
 def run_smoke_mode(cfg, device: torch.device):
-    """Execute rapid 1-epoch smoke verification on lightweight synthetic data."""
+    """Execute rapid 1-epoch smoke verification on lightweight synthetic data writing strictly to tempfile."""
     print("[SMOKE] Executing rapid smoke test training pipeline on synthetic data...")
     set_seed(42)
     seq_len = getattr(cfg, "SEQ_LEN", 10)
@@ -210,12 +222,25 @@ def run_smoke_mode(cfg, device: torch.device):
     tr = SupplyChainDataset(X_tr, y_tr)
     va = SupplyChainDataset(X_va, y_va)
 
+    import tempfile
+    tmp_dir = tempfile.mkdtemp()
     cfg_smoke = copy.copy(cfg)
+    cfg_smoke.CKPT_DIR = tmp_dir
     cfg_smoke.MAX_EPOCHS = 1
     cfg_smoke.BATCH_SIZE = 32
     cfg_smoke.PATIENCE = 2
 
     best, hist, path = train_one(cfg_smoke, "lstm", 42, tr, va, device=device)
+    smoke_loss_csv = os.path.join(tmp_dir, "lstm_seed42_loss.csv")
+    hist.to_csv(smoke_loss_csv, index=False)
+    smoke_summary_csv = os.path.join(tmp_dir, "training_summary.csv")
+    pd.DataFrame([{
+        "model": "lstm",
+        "seed": 42,
+        "best_val_loss": best,
+        "wall_clock_s": 0.25,
+    }]).to_csv(smoke_summary_csv, index=False)
+
     print(f"[SMOKE] Smoke run completed successfully. Best val loss: {best:.6f}, checkpoint saved to: {path}")
     return best, hist, path
 
@@ -255,7 +280,8 @@ def main(cfg=None, models=None, seeds=None, cli_args=None):
             "To test pipeline functionality locally, use '--smoke' or specify '--force-cpu'."
         )
 
-    tr, va, te, scaler, info = build_datasets(cfg)
+    should_save_scaler = args.force or not os.path.exists(cfg.SCALER_PATH)
+    tr, va, te, scaler, info = build_datasets(cfg, save_scaler=should_save_scaler)
     print(f"rows used={info['n_rows_used']}  span={info['start']} -> {info['end']}  "
           f"train/val/test windows={len(tr)}/{len(va)}/{len(te)}")
 
@@ -278,7 +304,7 @@ def main(cfg=None, models=None, seeds=None, cli_args=None):
     for name in resolved_models:
         for seed in resolved_seeds:
             path = ckpt_path(cfg, name, seed)
-            if os.path.exists(path):
+            if os.path.exists(path) and not args.force:
                 print(f"[{name} seed={seed}] [Skip] Checkpoint exists: {path}")
                 continue
 
@@ -317,6 +343,13 @@ def main(cfg=None, models=None, seeds=None, cli_args=None):
                 "wall_clock_s": round(elapsed, 2),
             })
             pd.DataFrame(rows).to_csv(summary_path, index=False)
+
+    completion_marker = os.path.join("outputs", "results", ".training_completed")
+    all_complete = all(os.path.exists(ckpt_path(cfg, m, s)) for m in MODEL_NAMES for s in [42, 43, 44, 45, 46])
+    if all_complete:
+        with open(completion_marker, "w", encoding="utf-8") as f:
+            f.write("COMPLETE\n")
+
 
 
 if __name__ == "__main__":
