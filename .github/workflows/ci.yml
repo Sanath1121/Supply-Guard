@@ -1,0 +1,50 @@
+name: SupplyGuard CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, feature/frontend-ui ]
+  pull_request:
+    branches: [ main, master, feature/frontend-ui ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Quality Checks & Phase Gate Verification
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Create Scaffolding Directories
+        run: |
+          mkdir -p data/raw data/processed outputs/models outputs/results outputs/figures
+
+      - name: Install PyTorch (CPU) and Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+
+      - name: Syntax and Bytecode Compilation Check
+        run: |
+          python -m compileall src training tests app -q
+
+      - name: Execute Verified Phase Gate Tests (0-3, 6, 7)
+        run: |
+          python tests/run_phase_tests.py --up-to 3
+          python tests/run_phase_tests.py --phase 6
+          python tests/run_phase_tests.py --phase 7
+
+      - name: Execute Model and Architecture Smoke Test
+        run: |
+          python -m tests.smoke_test

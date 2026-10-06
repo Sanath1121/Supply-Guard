@@ -25,30 +25,59 @@ SupplyGuard re-implements the IEEE ICCMC 2025 hybrid GCN+LSTM as a paper-style b
 ## Repository Structure
 ```
 Supply_chain_alret_system/
-├── docs/                     # Definitive implementation plans and master tech stack
+├── app/                      # Production Streamlit Dashboard (Dark Analytics)
+│   ├── streamlit_app.py      # Thin orchestrator with st.navigation & status strip
+│   ├── views/                # Overview, Monitor, Why, Benchmarks, Export, Sandbox
+│   ├── ui/                   # Reusable components, Plotly dark theme, SVG topology canvas
+│   ├── utils/                # Cached artifacts, results loader, explain service, formatters
+│   └── styles/               # custom_theme.css (offline-safe, WCAG AA dark analytics)
+├── docs/                     # Implementation plans, ADR, and fix documentation
 ├── data/raw/                 # Raw dataset (git-ignored)
 ├── src/                      # Core data pipeline, graph topology, and attribution
-│   ├── config.py
+│   ├── config.py             # Single source of truth for hyperparameters & paths
 │   ├── graph_builder.py
 │   ├── dataset.py
-│   ├── explainability.py
-│   └── models/               # Pure PyTorch GraphConv and ST-GCN-LSTM models
-│       ├── graph_layers.py
-│       └── st_gcn_lstm.py
+│   ├── explainability.py     # RiskExplainer (IG with Delta-attribution mode)
+│   └── models/               # PyTorch GCN, ST-GCN-LSTM, and baseline models
 ├── training/                 # Train and evaluation harnesses
-│   ├── train.py
-│   └── evaluate.py
+│   ├── train.py              # Multi-seed training with exact checkpoint saving
+│   └── evaluate.py           # Multi-seed empirical evaluation & results CSV writer
 ├── tests/                    # Phase-gated test harness and smoke tests
-│   ├── smoke_test.py
-│   ├── test_phase0_setup.py
-│   └── run_phase_tests.py
+│   ├── run_phase_tests.py    # Master gate test runner
+│   ├── test_phase7_app.py    # Gate 7 dashboard component and guard verification
+│   └── test_phase7_smoke_apptest.py  # AppTest headless smoke tests
 ├── outputs/                  # Figures, checkpoints, and evaluation tables
-├── AGENTS.md                 # Agent guardrails and source-of-truth invariants
 ├── requirements.txt          # Python dependency specifications
-├── requirements.lock         # Exact pip dependency lock
-├── setup_and_download.py     # Hardened dataset downloader & profiling script
 └── README.md
 ```
+
+---
+
+## Streamlit Dashboard
+
+### Launching the Dashboard
+```bash
+streamlit run app/streamlit_app.py
+```
+
+### Universal Status Strip
+The top of the dashboard displays an honest, live status strip that inspects the environment:
+- **Data Chip**: Indicates whether test-partition windows are loaded (`Test partition ✓`), running in isolated sandbox mode (`Sandbox`), or unavailable (`Missing raw CSV`).
+- **Model Chip**: Reports the active architecture, graph mode, seed, and whether real trained checkpoint weights were loaded (`ckpt ✓`) or untrained random initializations are in use (`UNTRAINED weights`).
+- **Scaler Chip**: Confirms whether `outputs/models/scaler.joblib` is fitted. If missing, raw unscaled units are hidden to prevent misleading interpretations.
+- **Tiers Chip**: Confirms whether severity thresholds reflect empirical train terciles (`Train terciles ✓`) or provisional defaults (`Provisional 0.35/0.65`).
+- **Explainer Chip**: Monitors axiomatic completeness of Integrated Gradients path integrals.
+
+### Scientific Integrity & Empty States
+Per the project integrity charter:
+1. **Zero Fabricated Metrics**: If checkpoints or evaluation CSVs are missing, the UI renders explicit empty states with exact reproduction commands (`python -m training.train`, `python -m training.evaluate`).
+2. **Strict Test Partition Replay**: Predictions are made strictly on historical test windows. No sliders allow manual sensor fabrication in the operational dashboard.
+3. **Isolated Sandbox Mode**: Experimental shock testing or custom CSV uploads are feature-gated and strictly isolated with persistent warning banners:
+   ```bash
+   # Enable sandbox mode via environment variable
+   export SG_ENABLE_SANDBOX=1
+   streamlit run app/streamlit_app.py
+   ```
 
 ---
 
@@ -64,9 +93,13 @@ pip install -r requirements.txt
 python setup_and_download.py
 ```
 
-### 3. Run Gate 0 Verification Suite
+### 3. Run Phase Gate Verification Suite
 ```bash
-python -m unittest tests.test_phase0_setup
-# or via the master phase test runner:
-python tests/run_phase_tests.py --phase 0
+# Run Gate 7 verification and AppTest smoke tests:
+python tests/run_phase_tests.py --phase 7
+
+# Run all completed phase gates (0 to 3, 6, 7):
+python tests/run_phase_tests.py --up-to 3
+python tests/run_phase_tests.py --phase 6
+python tests/run_phase_tests.py --phase 7
 ```
