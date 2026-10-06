@@ -23,8 +23,8 @@ Key accomplishments include:
    - Engineered progressive, deduplicated training summary appending to `outputs/results/training_summary.csv` logging `model`, `seed`, `best_val_loss`, and `wall_clock_s`.
    - Implemented a strict local CPU safety guardrail preventing accidental execution of the full 20-run grid on local CPU environments while providing `--smoke` and `--force-cpu` override paths.
 2. **Google Colab Training Workflow (`notebooks/colab_train.ipynb`):**
-   - Created a pristine 15-cell Google Colab notebook specifically configured for NVIDIA T4 GPU acceleration.
-   - Built a linear, zero-friction workflow covering environment diagnostics (`!nvidia-smi`), GitHub repository synchronization, dependency installation, SCRM dataset acquisition and integrity verification, 5-seed multi-model training (`!python -m training.train --device cuda`), zip packaging (`outputs.zip`), and automated browser download (`google.colab.files.download`).
+   - Created a pristine 15-cell Google Colab notebook specifically configured for NVIDIA A100 GPU (or T4 GPU) acceleration with `--batch-size 256`.
+   - Built a linear, zero-friction workflow covering environment diagnostics (`!nvidia-smi`), GitHub repository synchronization, dependency installation, SCRM dataset acquisition and integrity verification, 5-seed multi-model training (`!python -m training.train --device cuda --batch-size 256`), zip packaging (`outputs.zip`), and automated browser download (`google.colab.files.download`).
 3. **Anti-Tautological Test Refactoring (`tests/test_phase4_training.py`):**
    - Completely eradicated `SkipTest` and empty stub blocks from Gate 4 test suites.
    - Enforced direct imports and execution of production functions (`train_one`, `_loss`, `ckpt_path`, `resolve_device`, `parse_args`) using lightweight synthetic data in isolated temporary directories (`tempfile.mkdtemp()`), strictly preserving production artifacts in `outputs/`.
@@ -155,3 +155,26 @@ The Phase 4 deliverables underwent independent peer review and adversarial evalu
 - **Gate 4 Status:** **PASSED & APPROVED (Unanimous Multi-Agent Consensus)**
 - **System Readiness:** The training pipeline and Colab training harness are fully operational, tested against production contracts, and verified under adversarial stress. Checkpoints and loss curves can now be generated reliably in Google Colab.
 - **Approved Next Step:** **Phase 5 — Model Evaluation, Baseline Benchmarking & Statistical Verification** (`training/evaluate.py`, baseline persistence comparisons, multi-seed aggregation, and significance testing per AGENTS.md Rule 5).
+
+---
+
+## 7. Full 20-Run Google Colab Training Execution & Empirical Results
+
+The complete 5-seed multi-model training grid was successfully executed on Google Colab using an **NVIDIA A100 GPU (40GB VRAM)** with `--batch-size 256`. All 20 model checkpoints (`.pt`), per-run loss histories (`.csv`), and the unified training summary (`training_summary.csv`) were retrieved and unpacked into `outputs/`.
+
+### 7.1 Empirical Validation Loss Matrix
+
+| Model Architecture | Seed 42 | Seed 43 | Seed 44 | Seed 45 | Seed 46 | Mean Best Val Loss ($\pm$ Std) | Mean Wall-Clock (s) |
+|---|---|---|---|---|---|---|---|
+| **`lstm`** | 0.000930 | 0.000929 | 0.000956 | 0.000958 | 0.000934 | **0.000941 $\pm$ 0.000014** | 370.4s |
+| **`paper_overall`** | 0.000256 | 0.000246 | 0.000248 | 0.000247 | 0.000247 | **0.000249 $\pm$ 0.000004** | 418.5s |
+| **`st_gcn_lstm_sym`** | 0.000957 | 0.001421 | 0.001421 | 0.000958 | 0.000971 | **0.001145 $\pm$ 0.000252** | 416.7s |
+| **`st_gcn_lstm_dir`** | 0.000905 | 0.000901 | 0.000904 | 0.000903 | 0.000906 | **0.000904 $\pm$ 0.000002** | 472.1s |
+
+### 7.2 Key Training Observations
+1. **Convergence Stability:** All 20 models reached stable convergence without gradient explosion or NaN loss values, confirming the effectiveness of gradient norm clipping (`GRAD_CLIP = 1.0`).
+2. **Directed Model Outperforms LSTM on Validation Loss:**
+   - `st_gcn_lstm_dir` achieved a mean validation loss of **0.000904** compared to **0.000941** for `lstm`.
+   - The standard deviation across seeds for `st_gcn_lstm_dir` is exceptionally tight ($\pm 0.000002$), indicating high training consistency.
+3. **Paper Baseline Loss Profile:** `paper_overall` targets scalar Total Risk Index (TRI, the mean of 4 nodes), resulting in an expected lower variance target space (mean val loss 0.000249).
+4. **Execution Duration:** Total cumulative GPU training time across all 20 runs was **2.33 hours** (8,388 seconds), with an average runtime of ~7 minutes per run. All checkpoints were preserved with zero corruption.
