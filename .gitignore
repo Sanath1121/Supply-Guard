@@ -19,6 +19,11 @@ scratch/
 !outputs/results/param_counts.csv
 !outputs/results/training_summary.csv
 !outputs/results/*_loss.csv
+!outputs/results/overall_metrics.csv
+!outputs/results/node_metrics.csv
+!outputs/results/severity_metrics.csv
+!outputs/results/confusion_matrix.csv
+!outputs/figures/*.png
 
 # Python / Virtual Environments / Caches
 .venv/
