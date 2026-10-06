@@ -46,10 +46,9 @@ class STGCNLSTM(nn.Module):
             cfg.GRAPH_MODE = mode
         if residual is not None:
             cfg.RESIDUAL = residual
-            cfg.RESIDUAL_CONNECTION = residual
 
         self.cfg = cfg
-        self.residual = getattr(cfg, "RESIDUAL_CONNECTION", getattr(cfg, "RESIDUAL", True))
+        self.residual = getattr(cfg, "RESIDUAL", True)
         self.graphs = _register_graphs(self)
         d = cfg.GCN_HIDDEN_DIM
         self.gcn1 = GraphConv(cfg.NODE_FEAT_DIM, d, cfg.GRAPH_MODE)
@@ -89,10 +88,9 @@ class LSTMBaseline(nn.Module):
 
         if residual is not None:
             cfg.RESIDUAL = residual
-            cfg.RESIDUAL_CONNECTION = residual
 
         self.cfg = cfg
-        self.residual = getattr(cfg, "RESIDUAL_CONNECTION", getattr(cfg, "RESIDUAL", True))
+        self.residual = getattr(cfg, "RESIDUAL", True)
         self.lstm = nn.LSTM(cfg.NUM_INPUT_FEATURES, cfg.LSTM_HIDDEN_DIM, cfg.LSTM_NUM_LAYERS, batch_first=True,
                             dropout=cfg.LSTM_DROPOUT if cfg.LSTM_NUM_LAYERS > 1 else 0.0)
         self.head = nn.Sequential(nn.Linear(cfg.LSTM_HIDDEN_DIM, cfg.HEAD_HIDDEN), nn.ReLU(),

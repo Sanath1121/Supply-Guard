@@ -16,6 +16,12 @@ SupplyGuard re-implements the IEEE ICCMC 2025 hybrid GCN+LSTM as a paper-style b
 
 ---
 
+## Foundational Literature / Base Paper
+- **Citation:** Farzhana I. & Dev Harris L. (2025), *"Hybrid GNN-LSTM Model for Real-Time Supply Chain Risk Prediction"*, 2025 8th International Conference on Computing Methodologies and Communication (ICCMC), IEEE, [doi:10.1109/ICCMC65190.2025.11140739](https://doi.org/10.1109/ICCMC65190.2025.11140739).
+- **Note on Architecture:** Global mean pooling, vector dimensions (32/64/96), and scalar TRI represent SupplyGuard's architectural interpretations to bridge the paper's hybrid fusion concept to the dataset, not explicit verbatim specifications.
+
+---
+
 ## Repository Structure
 ```
 Supply_chain_alret_system/

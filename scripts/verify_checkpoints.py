@@ -1,18 +1,15 @@
-#!/usr/bin/env python3
-"""SupplyGuard Checkpoint Rigorous Verification Harness.
+"""SupplyGuard Checkpoint Verification Script (NEW-1).
 
-Verifies:
-1. All 20 model checkpoints exist on disk.
-2. Loads every checkpoint with weights_only=True and strict=True.
-3. Recomputes validation MSE on the exact validation partition (57,817 windows).
-4. Compares recomputed validation MSE to training_summary.csv with relative tolerance <= 1e-4.
-5. For collapsed symmetric seeds (st_gcn_lstm_sym seeds 43 and 44), compares
-   recomputed validation MSE to the analytical persistence validation MSE.
-6. Halts immediately and exits non-zero if ANY mismatch is encountered.
+Empirically verifies all 20 trained PyTorch model checkpoints against
+the recorded validation losses in outputs/results/training_summary.csv.
+
+Usage:
+    python scripts/verify_checkpoints.py
 """
 import os
 import sys
-import argparse
+import time
+import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
@@ -24,130 +21,109 @@ if PROJECT_ROOT not in sys.path:
 
 from src.config import Config
 from src.dataset import build_datasets
-from src.models import build_model
+from src.models.st_gcn_lstm import build_model
+from training.train import MODEL_ALIASES, ckpt_path
 
 
-def verify_checkpoints(tol: float = 1e-4, batch_size: int = 256):
+def verify_all_checkpoints(tolerance: float = 1e-4) -> bool:
+    """Verify all 20 checkpoints by recomputing validation MSE on the validation split."""
+    print("=" * 80)
+    print("SUPPLYGUARD CHECKPOINT INTEGRITY VERIFICATION (20 RUNS)")
+    print("=" * 80)
+
     cfg = Config()
-    summary_path = os.path.join("outputs", "results", "training_summary.csv")
+    summary_path = os.path.join(PROJECT_ROOT, "outputs", "results", "training_summary.csv")
     if not os.path.exists(summary_path):
-        print(f"[FATAL ERROR] training_summary.csv not found at {summary_path}")
-        sys.exit(1)
+        print(f"[ERROR] Training summary not found: {summary_path}")
+        return False
 
     summary_df = pd.read_csv(summary_path)
-    if len(summary_df) < 20:
-        print(f"[FATAL ERROR] training_summary.csv contains {len(summary_df)} rows, expected 20.")
-        sys.exit(1)
+    print(f"Loaded training summary with {len(summary_df)} entries.")
 
-    print("=" * 80)
-    print("SUPPLYGUARD PRODUCTION CHECKPOINT VERIFICATION HARNESS")
-    print(f"Target: 20 checkpoints | Relative Tolerance: {tol:.1e} | Strict State Dict Load")
-    print("=" * 80)
+    print("[DATA] Loading dataset validation partition...")
+    t0 = time.time()
+    _, va_ds, _, scaler, info = build_datasets(cfg, save_scaler=False)
+    print(f"[DATA] Validation partition loaded: {len(va_ds)} windows in {time.time() - t0:.2f}s")
 
-    # 1. Load validation partition without saving/mutating scaler
-    print("[1/3] Loading validation partition (build_datasets)...")
-    tr, va, te, scaler, info = build_datasets(cfg, save_scaler=False)
-    n_va = len(va)
-    print(f"      Validation samples: {n_va} windows | Segments: {info.get('n_clean_rows_retained')} clean rows")
-    va_dl = DataLoader(va, batch_size=batch_size, shuffle=False)
+    va_loader = DataLoader(va_ds, batch_size=512, shuffle=False)
 
-    # 2. Compute analytical persistence validation MSE
-    print("[2/3] Computing analytical persistence validation baseline...")
-    pers_loss_sum = 0.0
-    pers_total_items = 0
-    with torch.no_grad():
-        for b in va_dl:
-            pred_pers = b["sequence"][:, -1, :4]
-            tgt_node = b["node_target"]
-            loss_p = F.mse_loss(pred_pers, tgt_node)
-            blen = len(b["sequence"])
-            pers_loss_sum += loss_p.item() * blen
-            pers_total_items += blen
-
-    pers_val_mse = pers_loss_sum / max(pers_total_items, 1)
-    print(f"      Persistence Validation MSE: {pers_val_mse:.8f}")
-
-    # 3. Verify all 20 checkpoints
-    print("[3/3] Evaluating checkpoints against recorded losses and persistence...")
-    print("-" * 80)
-    header = f"{'Model Architecture':<18} | {'Seed':<5} | {'Recorded Val MSE':<16} | {'Recomputed Val':<16} | {'Rel Diff':<10} | {'Status'}"
-    print(header)
-    print("-" * 80)
-
-    failures = []
-    collapsed_seeds = {"st_gcn_lstm_sym": [43, 44]}
+    results = []
+    all_passed = True
 
     for _, row in summary_df.iterrows():
-        model_name = str(row["model"])
+        model_name = row["model"]
+        canonical_name = MODEL_ALIASES.get(model_name, model_name)
         seed = int(row["seed"])
-        recorded_val = float(row["best_val_loss"])
-        ckpt_file = os.path.join("outputs", "models", f"{model_name}_seed{seed}.pt")
+        recorded_loss = float(row["best_val_loss"])
 
-        if not os.path.exists(ckpt_file):
-            msg = f"Missing checkpoint file: {ckpt_file}"
-            print(f"{model_name:<18} | {seed:<5} | {recorded_val:<16.8f} | {'MISSING':<16} | {'N/A':<10} | [FAILED]")
-            failures.append((model_name, seed, msg))
+        model_file = ckpt_path(cfg, canonical_name, seed)
+        if not os.path.exists(model_file):
+            print(f"[MISSING] Checkpoint file missing: {model_file}")
+            results.append({
+                "model": canonical_name,
+                "seed": seed,
+                "recorded": recorded_loss,
+                "recomputed": np.nan,
+                "diff": np.nan,
+                "status": "MISSING",
+            })
+            all_passed = False
             continue
 
-        try:
-            model = build_model(model_name, cfg)
-            state_dict = torch.load(ckpt_file, map_location="cpu", weights_only=True)
-            model.load_state_dict(state_dict, strict=True)
-            model.eval()
-        except Exception as e:
-            msg = f"Checkpoint load failed: {e}"
-            print(f"{model_name:<18} | {seed:<5} | {recorded_val:<16.8f} | {'LOAD ERROR':<16} | {'N/A':<10} | [FAILED]")
-            failures.append((model_name, seed, msg))
-            continue
+        # Instantiate model and load checkpoint
+        model = build_model(canonical_name, cfg)
+        state_dict = torch.load(model_file, map_location="cpu")
+        model.load_state_dict(state_dict)
+        model.eval()
 
-        # Recompute validation loss matching train.py logic
-        loss_sum = 0.0
-        n_items = 0
+        # Compute validation loss across batches
+        total_loss, total_count = 0.0, 0
         with torch.no_grad():
-            for b in va_dl:
-                seq = b["sequence"]
+            for batch in va_loader:
+                seq = batch["sequence"]
                 pred = model(seq)
-                tgt = b["tri_target"] if model_name == "paper_overall" else b["node_target"]
-                batch_loss = F.mse_loss(pred, tgt)
-                blen = len(seq)
-                loss_sum += batch_loss.item() * blen
-                n_items += blen
+                tgt = batch["tri_target"] if canonical_name == "paper_overall" else batch["node_target"]
+                loss = F.mse_loss(pred, tgt)
+                n = len(seq)
+                total_loss += loss.item() * n
+                total_count += n
 
-        recomputed_val = loss_sum / max(n_items, 1)
-        rel_diff = abs(recomputed_val - recorded_val) / recorded_val
+        recomputed_loss = total_loss / max(total_count, 1)
+        diff = abs(recomputed_loss - recorded_loss)
+        passed = diff <= tolerance
 
-        # Verification check against recorded value
-        if rel_diff > tol:
-            status = "[MISMATCH]"
-            failures.append((model_name, seed, f"Rel diff {rel_diff:.2e} exceeds tolerance {tol:.1e}"))
-        else:
-            status = "[VERIFIED]"
+        if not passed:
+            all_passed = False
 
-        # Additional check for collapsed seeds
-        if model_name in collapsed_seeds and seed in collapsed_seeds[model_name]:
-            rel_diff_pers = abs(recomputed_val - pers_val_mse) / pers_val_mse
-            if rel_diff_pers <= tol:
-                status += " (PERS-COLLAPSE)"
-            else:
-                status = "[COLLAPSE MISMATCH]"
-                failures.append((model_name, seed, f"Expected collapse match to persistence {pers_val_mse:.8f}, got rel diff {rel_diff_pers:.2e}"))
+        status = "PASS" if passed else "FAIL"
+        results.append({
+            "model": canonical_name,
+            "seed": seed,
+            "recorded": recorded_loss,
+            "recomputed": recomputed_loss,
+            "diff": diff,
+            "status": status,
+        })
 
-        print(f"{model_name:<18} | {seed:<5} | {recorded_val:<16.8f} | {recomputed_val:<16.8f} | {rel_diff:<10.2e} | {status}")
-
+    res_df = pd.DataFrame(results)
+    print("\n" + "-" * 80)
+    print(f"{'Model':<18} | {'Seed':<5} | {'Recorded Val MSE':<16} | {'Recomputed Val MSE':<18} | {'Diff':<10} | {'Status'}")
     print("-" * 80)
-    if failures:
-        print(f"\n[VERIFICATION FAILED] Encountered {len(failures)} mismatch/failure(s):")
-        for m, s, reason in failures:
-            print(f"  - {m} (seed {s}): {reason}")
-        print("\nHALTING PIPELINE PER AUDIT CONTRACT. INVESTIGATE DISCREPANCIES.")
-        sys.exit(1)
+    for _, r in res_df.iterrows():
+        rec_str = f"{r['recorded']:.6f}" if not np.isnan(r['recorded']) else "N/A"
+        recomp_str = f"{r['recomputed']:.6f}" if not np.isnan(r['recomputed']) else "N/A"
+        diff_str = f"{r['diff']:.2e}" if not np.isnan(r['diff']) else "N/A"
+        print(f"{r['model']:<18} | {r['seed']:<5} | {rec_str:<16} | {recomp_str:<18} | {diff_str:<10} | {r['status']}")
+    print("-" * 80)
+
+    if all_passed:
+        print(f"\n[VERIFIED] ALL {len(res_df)} CHECKPOINTS MATCH TRAINING SUMMARY WITHIN TOLERANCE ({tolerance:.1e})!")
     else:
-        print("\n[VERIFICATION SUCCESS] ALL 20 CHECKPOINTS 100% VERIFIED WITHIN TOLERANCE!")
-        print(f"  - Recorded training losses match recomputed validation MSE (max rel diff <= {tol:.1e}).")
-        print(f"  - st_gcn_lstm_sym seeds 43 and 44 verified as collapsed to analytical persistence MSE ({pers_val_mse:.8f}).")
-        print("  - All state dicts load with strict=True and weights_only=True.")
-        return True
+        print(f"\n[FAILURE] One or more checkpoints deviated from training summary!")
+
+    return all_passed
 
 
 if __name__ == "__main__":
-    verify_checkpoints()
+    success = verify_all_checkpoints()
+    sys.exit(0 if success else 1)

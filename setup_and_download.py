@@ -50,9 +50,11 @@ def download_dataset(url: str, dest_path: str):
             if chunk:
                 f.write(chunk)
                 downloaded += len(chunk)
-                if total_size > 0:
+                if total_size > 0 and downloaded <= total_size:
                     percent = (downloaded / total_size) * 100
                     print(f"  Downloaded {downloaded / (1024*1024):.1f} MB / {total_size / (1024*1024):.1f} MB ({percent:.1f}%)", end="\r")
+                else:
+                    print(f"  Downloaded {downloaded / (1024*1024):.1f} MB", end="\r")
     print(f"\n[INFO] Download completed: {dest_path}")
 
 

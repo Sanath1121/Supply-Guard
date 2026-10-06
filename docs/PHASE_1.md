@@ -107,19 +107,20 @@ In accordance with Plan A §3 and `AGENTS.md`, persistence $R^2$ was benchmarked
 | Dimension | Empirical Finding | Pre-Registered Rule | Gate Verdict | Prescribed Action |
 | :--- | :--- | :--- | :--- | :--- |
 | **1. Persistence Dominance** | Manufacturer $R^2 = 0.9914 \ge 0.99$ at 2 min.<br>Manufacturer $R^2 = 0.9672 < 0.99$ at 10 min. | Lengthen horizon if persistence $R^2 \ge 0.99$. | **REJECT 2-min**<br>**APPROVE 10-min** | **Lock `HORIZON_MIN = 10` ($H=5$ steps)** in `src/config.py`. Fall back to 20 min if persistence dominates downstream. |
-| **2. Cross-Echelon Coupling** | Pairwise adjacent correlations $< 0.40$; lead-lag curves flat across lags $-20$ to $+20$. | If adjacent cross-correlations $< 0.40$, message passing is not guaranteed to beat LSTM. | **REFRAME_RQ2** | **Reframe RQ2 as an empirical hypothesis test**: "Test whether the assumed graph topology adds measurable predictive value over a graph-free temporal LSTM baseline." |
+| **2. Cross-Echelon Coupling** | Pairwise adjacent correlations $< 0.40$; lead-lag curves flat across lags $-20$ to $+20$. *Note on non-adjacent coupling:* Manufacturer-Retailer correlation is $0.54$ (the strongest pairwise correlation in the dataset), despite the physical linear supply chain DAG $S \to M \to D \to R$ lacking a direct edge between M and R. Furthermore, Granger causality tests show $M \to S$ influence at short lags. | If adjacent cross-correlations $< 0.40$, message passing is not guaranteed to beat LSTM. | **REFRAME_RQ2** | **Reframe RQ2 as an empirical hypothesis test**: "Test whether the assumed graph topology adds measurable predictive value over a graph-free temporal LSTM baseline." |
 | **3. Temporal Serial Structure** | Lag-1 ACF $> 0.98$ across all 4 echelons. Bartlett white noise rejected. | If data is i.i.d. noise, halt project and re-examine framing. | **PASS** | **Proceed with sequential modeling**: Data exhibits rich non-stationary autoregressive structure suitable for LSTM and ST-GCN. |
 
 ---
 
 ## 6. Base Paper Benchmark Audit (IEEE ICCMC 2025)
 
-- **Paper Citation:** S. Banerjee, D. Sharma, and R. Kumar, *"Graph-Based Risk Propagation and Machine Learning for Supply Chain Resilience,"* 2025 9th International Conference on Computing Methodologies and Communication (ICCMC), IEEE, 2025.
+- **Paper Citation:** Farzhana I. & Dev Harris L., *"Hybrid GNN-LSTM Model for Real-Time Supply Chain Risk Prediction"*, 2025 8th International Conference on Computing Methodologies and Communication (ICCMC), IEEE, 2025, DOI: [10.1109/ICCMC65190.2025.11140739](https://doi.org/10.1109/ICCMC65190.2025.11140739).
 - **Quoted Paper Metrics:** $MSE = 0.12$, $MAE = 0.08$, $R^2 = 0.92$, Accuracy $= 88\%$.
 - **Audit Findings:**
-  1. **Simulation-Based Environment:** Sections IV.D and V of the paper explicitly state that reported results were derived from a **synthetic simulation environment**, not from end-to-end backtesting on the 4-year empirical time series.
+  1. **Simulation-Based Environment:** The paper reported results from a synthetic experimental setup rather than end-to-end backtesting on the 4-year empirical time series.
   2. **Omission of Baselines:** The paper did not compare against naive Persistence or Ridge-AR baselines. At 2-minute cadence, persistence achieves $R^2 = 0.975$ without any learning.
-  3. **SupplyGuard Scientific Contribution:** SupplyGuard provides the first rigorous, leakage-free benchmark of the ST-GCN-LSTM architecture against persistence and linear autoregression on the real 647,636-row dataset across 5 fixed seeds (`42–46`).
+  3. **Architectural Interpretation Note:** Global mean pooling, vector dimensions (32/64/96), and scalar TRI represent SupplyGuard's architectural interpretations to bridge the paper's hybrid fusion concept to the dataset, not explicit verbatim specifications in the manuscript text.
+  4. **SupplyGuard Scientific Contribution:** SupplyGuard provides the first rigorous, leakage-free benchmark of the ST-GCN-LSTM architecture against persistence and linear autoregression on the real 647,636-row dataset across 5 fixed seeds (`42–46`).
 
 ---
 

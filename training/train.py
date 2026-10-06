@@ -134,7 +134,7 @@ def _loss(model_name: str, model: torch.nn.Module, batch: dict, device: Optional
     return F.mse_loss(pred, tgt)
 
 
-def train_one(cfg, name: str, seed: int, tr, va, device="cpu", log=print) -> Tuple[float, pd.DataFrame, str]:
+def train_one(cfg, name: str, seed: int, tr, va, device="cpu", log=print, force_overwrite: bool = True) -> Tuple[float, pd.DataFrame, str]:
     """Train a single model for a single seed with early stopping and gradient clipping."""
     set_seed(seed)
     dev = torch.device(device) if isinstance(device, str) else (device or torch.device("cpu"))
@@ -154,6 +154,10 @@ def train_one(cfg, name: str, seed: int, tr, va, device="cpu", log=print) -> Tup
 
     best, bad, hist = float("inf"), 0, []
     path = ckpt_path(cfg, canonical_name, seed)
+    if os.path.exists(path) and not force_overwrite:
+        raise FileExistsError(
+            f"Checkpoint already exists at {path}. Pass force_overwrite=True or CLI --force to overwrite."
+        )
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
 
     for ep in range(1, max_epochs + 1):
@@ -304,8 +308,9 @@ def main(cfg=None, models=None, seeds=None, cli_args=None):
     for name in resolved_models:
         for seed in resolved_seeds:
             path = ckpt_path(cfg, name, seed)
-            if os.path.exists(path) and not args.force:
-                print(f"[{name} seed={seed}] [Skip] Checkpoint exists: {path}")
+            loss_file = f"outputs/results/{name}_seed{seed}_loss.csv"
+            if os.path.exists(path) and os.path.exists(loss_file) and not args.force:
+                print(f"[{name} seed={seed}] [Skip] Checkpoint and loss history exist: {path}")
                 continue
 
             t0 = time.time()
@@ -321,13 +326,13 @@ def main(cfg=None, models=None, seeds=None, cli_args=None):
                         "seq_len": getattr(cfg, "SEQ_LEN", 10),
                         "residual": getattr(cfg, "RESIDUAL", True),
                     })
-                    best, hist, path = train_one(cfg, name, seed, tr, va, device=device)
+                    best, hist, path = train_one(cfg, name, seed, tr, va, device=device, force_overwrite=args.force)
                     for r in hist.itertuples():
                         mlflow.log_metric("train_loss", r.train_loss, step=r.epoch)
                         mlflow.log_metric("val_loss", r.val_loss, step=r.epoch)
                     mlflow.log_artifact(path)
             else:
-                best, hist, path = train_one(cfg, name, seed, tr, va, device=device)
+                best, hist, path = train_one(cfg, name, seed, tr, va, device=device, force_overwrite=args.force)
 
             elapsed = time.time() - t0
             loss_file = f"outputs/results/{name}_seed{seed}_loss.csv"
