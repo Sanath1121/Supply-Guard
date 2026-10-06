@@ -75,7 +75,7 @@ Key accomplishments include:
     8. **Cell 7 [Markdown]:** Step 4 dataset acquisition and SHA-256 verification instructions.
     9. **Cell 8 [Code]:** `!python setup_and_download.py`.
     10. **Cell 9 [Markdown]:** Step 5 grid execution instructions.
-    11. **Cell 10 [Code]:** `!python -m training.train --device cuda`.
+    11. **Cell 10 [Code]:** `!python -m training.train --device cuda --batch-size 256`.
     12. **Cell 11 [Markdown]:** Step 6 packaging instructions.
     13. **Cell 12 [Code]:** `!zip -r outputs.zip outputs/models outputs/results`.
     14. **Cell 13 [Markdown]:** Step 7 browser download instructions.

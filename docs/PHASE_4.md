@@ -23,8 +23,8 @@ Key accomplishments include:
    - Engineered progressive, deduplicated training summary appending to `outputs/results/training_summary.csv` logging `model`, `seed`, `best_val_loss`, and `wall_clock_s`.
    - Implemented a strict local CPU safety guardrail preventing accidental execution of the full 20-run grid on local CPU environments while providing `--smoke` and `--force-cpu` override paths.
 2. **Google Colab Training Workflow (`notebooks/colab_train.ipynb`):**
-   - Created a pristine 15-cell Google Colab notebook specifically configured for NVIDIA T4 GPU acceleration.
-   - Built a linear, zero-friction workflow covering environment diagnostics (`!nvidia-smi`), GitHub repository synchronization, dependency installation, SCRM dataset acquisition and integrity verification, 5-seed multi-model training (`!python -m training.train --device cuda`), zip packaging (`outputs.zip`), and automated browser download (`google.colab.files.download`).
+   - Created a pristine 15-cell Google Colab notebook specifically configured for NVIDIA A100 GPU (or T4 GPU) acceleration with `--batch-size 256`.
+   - Built a linear, zero-friction workflow covering environment diagnostics (`!nvidia-smi`), GitHub repository synchronization, dependency installation, SCRM dataset acquisition and integrity verification, 5-seed multi-model training (`!python -m training.train --device cuda --batch-size 256`), zip packaging (`outputs.zip`), and automated browser download (`google.colab.files.download`).
 3. **Anti-Tautological Test Refactoring (`tests/test_phase4_training.py`):**
    - Completely eradicated `SkipTest` and empty stub blocks from Gate 4 test suites.
    - Enforced direct imports and execution of production functions (`train_one`, `_loss`, `ckpt_path`, `resolve_device`, `parse_args`) using lightweight synthetic data in isolated temporary directories (`tempfile.mkdtemp()`), strictly preserving production artifacts in `outputs/`.
@@ -75,7 +75,7 @@ Key accomplishments include:
     8. **Cell 7 [Markdown]:** Step 4 dataset acquisition and SHA-256 verification instructions.
     9. **Cell 8 [Code]:** `!python setup_and_download.py`.
     10. **Cell 9 [Markdown]:** Step 5 grid execution instructions.
-    11. **Cell 10 [Code]:** `!python -m training.train --device cuda`.
+    11. **Cell 10 [Code]:** `!python -m training.train --device cuda --batch-size 256`.
     12. **Cell 11 [Markdown]:** Step 6 packaging instructions.
     13. **Cell 12 [Code]:** `!zip -r outputs.zip outputs/models outputs/results`.
     14. **Cell 13 [Markdown]:** Step 7 browser download instructions.
