@@ -1,9 +1,9 @@
 """SupplyGuard: Spatiotemporal Multi-Echelon Supply Chain Risk Alert System.
 
-Main application entry point. Implements a thin orchestrator with:
-- Accessible restrained dark analytics styling
+Main application entry point. Implements an enterprise orchestrator with:
+- Accessible restrained dark telemetry styling (Linear/Vercel/Stripe aesthetic)
 - st.navigation multi-page information architecture
-- Universal top Status Strip reporting real artifact status
+- Universal top Command HUD reporting real artifact status
 - Honest inference without fabricated telemetry
 """
 import os
@@ -34,7 +34,7 @@ from app.views.sandbox import render_sandbox
 
 
 def load_custom_css():
-    """Inject restrained dark analytics stylesheet."""
+    """Inject enterprise dark telemetry stylesheet."""
     css_path = os.path.join(os.path.dirname(__file__), "styles", "custom_theme.css")
     if os.path.exists(css_path):
         with open(css_path, "r", encoding="utf-8") as f:
@@ -51,7 +51,7 @@ def init_session_state():
 
 def main():
     st.set_page_config(
-        page_title="SupplyGuard Risk Intelligence",
+        page_title="SupplyGuard — Risk Intelligence",
         page_icon="🛡️",
         layout="wide",
         initial_sidebar_state="expanded"
@@ -63,53 +63,69 @@ def main():
     # 1. Sidebar Brand & Controls
     with st.sidebar:
         st.html(clean_html("""
-        <div style="padding: 4px 0 14px 0; border-bottom: 1px solid var(--border); margin-bottom: 14px;">
-            <div style="font-size: 1.0625rem; font-weight: 700; color: var(--text); letter-spacing: 0.04em;">SUPPLYGUARD</div>
-            <div style="font-size: 0.75rem; color: var(--text-3); margin-top: 2px;">Spatiotemporal Risk Intelligence</div>
+        <div style="padding: 6px 0 16px 0; border-bottom: 1px solid var(--border); margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.25rem;">🛡️</span>
+                <div>
+                    <div style="font-size: 1.05rem; font-weight: 800; color: #FFFFFF; letter-spacing: 0.05em;">SUPPLYGUARD</div>
+                    <div style="font-size: 0.72rem; color: var(--accent-light); font-weight: 500; letter-spacing: 0.02em;">Risk Intelligence Command Center</div>
+                </div>
+            </div>
         </div>
         """))
 
-        # Reduced motion setting
-        reduce_motion = st.checkbox("Reduce motion", value=False, help="Disable CSS animations for accessibility")
+        # Accessibility setting
+        reduce_motion = st.checkbox("Reduce motion", value=False, help="Disable CSS animations for high-accessibility viewing")
         if reduce_motion:
             st.markdown("<style>body, body * { animation: none !important; transition: none !important; }</style>", unsafe_allow_html=True)
 
-        with st.expander("Model Configuration", expanded=True):
+        with st.expander("Engine Configuration", expanded=True):
             model_name = st.selectbox(
-                "Architecture",
+                "Inference Engine",
                 ["st_gcn_lstm", "lstm", "paper_overall"],
                 index=0,
                 format_func=lambda x: {
                     "st_gcn_lstm": "ST-GCN-LSTM (Spatiotemporal)",
-                    "lstm": "LSTM Baseline (Graph-Free)",
-                    "paper_overall": "Paper Hybrid (Overall TRI)"
+                    "lstm": "Ablation LSTM (Graph-Free)",
+                    "paper_overall": "Global Aggregate (Legacy Baseline)"
                 }.get(x, x),
-                key="model_name_select"
+                key="model_name_select",
+                help="ST-GCN-LSTM couples graph topology with temporal dynamics for node-level early warning."
             )
 
             graph_mode = st.selectbox(
-                "Graph Topology",
+                "Network Topology",
                 ["directed", "symmetric"],
                 index=0,
                 disabled=(model_name != "st_gcn_lstm"),
-                help="Directed: S->M->D->R asymmetric weights. Symmetric: Undirected Kipf normalization.",
+                help="Directed: Cascading S->M->D->R physical flow. Symmetric: Undirected graph.",
                 key="graph_mode_select"
             )
 
             seed = st.selectbox(
-                "Random Seed",
+                "Model Seed Checkpoint",
                 Config.SEEDS,
                 index=0,
-                key="seed_select"
+                key="seed_select",
+                help="Select trained seed (42-46) to verify stability across independent runs."
             )
 
-        # Live Measured Hardware Telemetry
-        device_str = "CUDA (" + torch.cuda.get_device_name(0) + ")" if torch.cuda.is_available() else "CPU"
+        # Hardware & Engine Telemetry
+        device_str = "CUDA (" + torch.cuda.get_device_name(0) + ")" if torch.cuda.is_available() else "CPU (AVX2 Vectorized)"
         st.html(clean_html(f"""
-        <div style="font-size: 0.75rem; color: var(--text-3); padding: 8px 10px; background: var(--surface-2); border-radius: var(--r-sm); border: 1px solid var(--border); margin-top: 8px;">
-            <div><strong>Device:</strong> <span class="mono-val">{device_str}</span></div>
-            <div style="margin-top: 2px;"><strong>PyTorch:</strong> <span class="mono-val">{torch.__version__}</span></div>
-            <div style="margin-top: 2px;"><strong>Horizon:</strong> <span class="mono-val">t+{Config.HORIZON} (10 min)</span></div>
+        <div style="font-size: 0.75rem; color: var(--text-3); padding: 10px 12px; background: rgba(15, 23, 42, 0.8); border-radius: var(--r-sm); border: 1px solid var(--border); margin-top: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span><strong>Runtime:</strong></span>
+                <span class="mono-val" style="color: var(--ok);">{device_str}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                <span><strong>PyTorch:</strong></span>
+                <span class="mono-val">{torch.__version__}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                <span><strong>Forecast Lead:</strong></span>
+                <span class="mono-val" style="color: var(--accent-light);">+10 Min (t+5)</span>
+            </div>
         </div>
         """))
 
@@ -161,11 +177,11 @@ def main():
         status_strip(status)
         render_sandbox(status, model)
 
-    p_overview = st.Page(view_overview, title="Overview", url_path="overview", icon=":material/dashboard:", default=True)
-    p_monitor = st.Page(view_monitor, title="Monitor", url_path="monitor", icon=":material/analytics:")
-    p_why = st.Page(view_why, title="Why this forecast", url_path="why", icon=":material/psychology:")
-    p_benchmarks = st.Page(view_benchmarks, title="Benchmarks", url_path="benchmarks", icon=":material/leaderboard:")
-    p_export = st.Page(view_export, title="Export report", url_path="export", icon=":material/description:")
+    p_overview = st.Page(view_overview, title="Executive Overview", url_path="overview", icon=":material/dashboard:", default=True)
+    p_monitor = st.Page(view_monitor, title="Risk Monitor", url_path="monitor", icon=":material/analytics:")
+    p_why = st.Page(view_why, title="Diagnostic XAI", url_path="why", icon=":material/psychology:")
+    p_benchmarks = st.Page(view_benchmarks, title="Production Benchmarks", url_path="benchmarks", icon=":material/leaderboard:")
+    p_export = st.Page(view_export, title="Incident Dossier", url_path="export", icon=":material/description:")
 
     # Store p_why in session state for cross-page navigation from Monitor
     st.session_state["page_why"] = p_why
@@ -175,7 +191,7 @@ def main():
     # Optional Sandbox Mode (strictly feature-flagged per Rule R1)
     enable_sandbox = getattr(Config, "ENABLE_SANDBOX", False) or os.environ.get("SG_ENABLE_SANDBOX") == "1"
     if enable_sandbox:
-        p_sandbox = st.Page(view_sandbox, title="Sandbox", url_path="sandbox", icon=":material/science:")
+        p_sandbox = st.Page(view_sandbox, title="Stress-Test Sandbox", url_path="sandbox", icon=":material/science:")
         pages.append(p_sandbox)
 
     # 4. Multi-Page Navigation Runner

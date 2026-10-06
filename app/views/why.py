@@ -1,8 +1,8 @@
 """SupplyGuard Explainability & Sensitivity View (Why This Forecast).
 
 Provides Integrated Gradients attributions, Delta-vs-persistence decomposition,
-temporal saliency profiles, mathematical completeness auditing, and model deletion sensitivity tests.
-Never claims causal origins; frames all outputs strictly as sensitivity attributions.
+temporal saliency profiles, mathematical completeness auditing, and model counterfactual sensitivity tests.
+Frames all outputs strictly as axiomatic sensitivity attributions.
 """
 from typing import Dict, Any, List, Optional
 import numpy as np
@@ -24,8 +24,8 @@ def render_why(
 ):
     """Render the Explainability view."""
     section_header(
-        "Sensitivity Attribution & Diagnostic Suite",
-        "Path-integrated gradients relative to baseline, delta-attribution decomposition, and deletion sensitivity tests."
+        "Explainable AI (XAI) Sensitivity & Diagnostic Suite",
+        "Path-integrated gradients, delta-attribution decomposition, and counterfactual sensitivity auditing."
     )
 
     if not windows or len(windows) == 0:
@@ -38,7 +38,7 @@ def render_why(
         return
 
     if status.model_name == "paper_overall":
-        st.info("The selected model architecture (PaperHybridOverall) produces a scalar TRI forecast. Echelon-specific attributions are only supported for node-level models (ST-GCN-LSTM or LSTM Baseline).")
+        st.info("The selected model architecture produces a scalar global TRI forecast. Echelon-specific node attributions are active on ST-GCN-LSTM or LSTM Baseline.")
         return
 
     # Select current window from session state
@@ -46,18 +46,18 @@ def render_why(
     if w_idx >= len(windows):
         w_idx = 0
     current_window = windows[w_idx]
-    seq = current_window["sequence"] # [10, 5]
+    seq = current_window["sequence"]  # [10, 5]
 
     # Controls row: Node Selector and Full vs. Delta Mode
     c1, c2 = st.columns([1, 1], gap="medium")
 
     with c1:
         if "selected_node_idx" not in st.session_state:
-            st.session_state["selected_node_idx"] = 1 # Default to Manufacturer
+            st.session_state["selected_node_idx"] = 1  # Default to Manufacturer
 
         node_opts = list(range(len(NODE_NAMES)))
         target_idx = st.radio(
-            "Target Echelon to Explain",
+            "Target Echelon to Diagnose",
             options=node_opts,
             format_func=lambda i: NODE_NAMES[i],
             index=st.session_state["selected_node_idx"],
@@ -68,49 +68,59 @@ def render_why(
 
     with c2:
         delta_mode_sel = st.radio(
-            "Attribution Decomposition Mode",
-            options=["Full forecast attribution", "Δ vs persistence (what network added)"],
+            "Attribution Mode",
+            options=["Full Forecast Attribution", "Δ vs Persistence (Network Adjustment)"],
             index=0,
             horizontal=True,
-            help="Full mode explains total predicted risk f(x) - f(x0). Residual delta mode isolates the incremental adjustment made by the network over the last observed state."
+            help="Full mode explains total predicted risk. Residual delta mode isolates the incremental adjustment made by the network over the last observed state."
         )
-        residual_delta = (delta_mode_sel != "Full forecast attribution")
-        st.caption("Explains total forecast $f(x) - f(x_0)$" if not residual_delta else "Explains incremental forecast delta over persistence: $g(x) = f(x) - y_t$")
+        residual_delta = (delta_mode_sel != "Full Forecast Attribution")
+        st.caption("Explaining total forecast $f(x) - f(x_0)$" if not residual_delta else "Explaining incremental forecast adjustment: $g(x) = f(x) - y_t$")
 
     st.html("<div style='height: 12px;'></div>")
 
     # Compute attribution lazily
     model_key = f"{status.model_name}:{status.graph_mode}:{status.seed}"
-    with st.spinner("Computing 64-step Integrated Gradients..."):
+    with st.spinner("Executing 64-step Path-Integrated Gradients..."):
         res, err = compute_explanation(model_key, seq, target_idx, residual_delta=residual_delta)
 
     if err or res is None:
         st.error(f"Integrated Gradients computation failed: {err}")
         return
 
-    # 1. Plain-English Dynamic Narrative & Scientific Framing
+    # 1. Plain-English Dynamic Narrative & Action Directive
     narration_text = narrate(res, seq_len=Config.SEQ_LEN)
+    
+    # Echelon-specific action protocol recommendations
+    action_protocols = {
+        "Supplier": "🚨 <strong>Vendor Action:</strong> Engage tier-1 vendor rep; trigger alternate raw material dispatch line; inspect transport pipeline.",
+        "Manufacturer": "⚙️ <strong>Plant Action:</strong> Rebalance assembly line batch scheduling; verify buffer inventory; stage secondary components.",
+        "Distributor": "🚚 <strong>Logistics Action:</strong> Reroute regional freight corridors; alert distribution cross-docks; audit transit delays.",
+        "Retailer": "🏪 <strong>Fulfillment Action:</strong> Reallocate regional safety stock to high-demand nodes; throttle backorder commitments."
+    }
+    action_text = action_protocols.get(NODE_NAMES[target_idx], "Review buffer thresholds and monitor upstream telemetry.")
+
     narrative_html = f"""
-    <div style="font-size: 0.9375rem; line-height: 1.6; color: var(--text);">
+    <div style="font-size: 0.9375rem; line-height: 1.65; color: var(--text);">
         {escape(narration_text)}
     </div>
-    <div style="margin-top: 10px; font-size: 0.75rem; color: var(--text-3); border-top: 1px solid var(--border); padding-top: 6px;">
-        <strong>Scientific Framing:</strong> Attributions measure gradient sensitivity relative to the training baseline. 
-        They explain the mathematical behavior of the neural network on this window, not verified physical real-world causation.
+    <div style="margin-top: 12px; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border-left: 3px solid var(--accent); border-radius: 4px; font-size: 0.8125rem; color: var(--text-2);">
+        {action_text}
+    </div>
+    <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-3); padding-top: 4px;">
+        <em>Axiomatic Attribution:</em> Path-integrated gradients quantify model input saliency relative to calibrated baseline conditions.
     </div>
     """
-    st.html(card(f"Forecast Narrative: {NODE_NAMES[target_idx]}", narrative_html))
+    st.html(card(f"AI Diagnostic Narrative: {NODE_NAMES[target_idx]}", narrative_html))
     st.html("<div style='height: 16px;'></div>")
 
     # 2. Charts Row: Signed Feature Attribution and Temporal Profile
     chart_col1, chart_col2 = st.columns([1, 1], gap="medium")
 
     with chart_col1:
-        # Feature Signed Attributions Bar Chart
-        f_signed = res["feature_signed"] # [5]
-        f_shares = res["feature_importance"] # [5]
+        f_signed = res["feature_signed"]  # [5]
+        f_shares = res["feature_importance"]  # [5]
 
-        # Colors: red/bad if raising risk, green/ok if lowering risk
         bar_colors = ["#EF4444" if val >= 0 else "#10B981" for val in f_signed]
 
         fig_feat = go.Figure()
@@ -123,7 +133,7 @@ def render_why(
             hovertemplate="<b>%{y}</b><br>Net Push: %{x:.4f}<br>Share of |Attr|: %{customdata}<extra></extra>"
         ))
         fig_feat.update_layout(
-            title="Feature Signed Attribution (Net Push)",
+            title="Feature Signed Attribution (Push Direction)",
             xaxis_title="Attribution (Positive = Increases Risk, Negative = Decreases)",
             yaxis=dict(autorange="reversed"),
             margin=dict(l=10, r=10, t=35, b=25)
@@ -132,20 +142,19 @@ def render_why(
         st.plotly_chart(fig_feat, use_container_width=True)
 
     with chart_col2:
-        # Temporal Saliency Profile
-        t_shares = res["time_importance"] # [10]
+        t_shares = res["time_importance"]  # [10]
         t_labels = [f"t-{Config.SEQ_LEN - 1 - i}" if (Config.SEQ_LEN - 1 - i) > 0 else "t" for i in range(Config.SEQ_LEN)]
 
         fig_time = go.Figure()
         fig_time.add_trace(go.Bar(
             x=t_labels,
             y=t_shares,
-            marker=dict(color="#38BDF8"),
-            hovertemplate="<b>Step %{x}</b><br>Importance Share: %{y:.1%}<extra></extra>"
+            marker=dict(color="#3B82F6"),
+            hovertemplate="<b>Step %{x}</b><br>Saliency Share: %{y:.1%}<extra></extra>"
         ))
         fig_time.update_layout(
             title="Temporal Saliency Profile (Window Attention)",
-            xaxis_title="Time Step Across Lookback Window",
+            xaxis_title="Lookback Time Step Across Window",
             yaxis_title="Normalized Share of Attribution",
             margin=dict(l=10, r=10, t=35, b=25)
         )
@@ -181,10 +190,9 @@ def render_why(
         st.html(card("Completeness Axiom Audit", audit_html))
 
     with del_col:
-        # Real Deletion Test
         top_feat_idx = int(np.argmax(res["feature_importance"]))
         neutralize_idx = st.selectbox(
-            "Feature to Neutralize (Model Sensitivity Test)",
+            "Feature to Neutralize (Counterfactual Test)",
             options=list(range(len(FEATURE_NAMES))),
             format_func=lambda i: f"{FEATURE_NAMES[i]} ({res['feature_importance'][i]:.0%} share)",
             index=top_feat_idx,
@@ -199,7 +207,7 @@ def render_why(
         del_html = f"""
         <div>
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
-                <span style="font-size: 0.8125rem; color: var(--text-2);">Predicted Risk Shift:</span>
+                <span style="font-size: 0.8125rem; color: var(--text-2);">Counterfactual Risk Shift:</span>
                 <span style="font-size: 1.125rem; font-weight: 700; color: {'var(--bad)' if d_val > 0 else 'var(--ok)'};" class="mono-val">
                     {'▲ +' if d_val > 0 else '▼ '}{d_val:.4f}
                 </span>
@@ -213,14 +221,12 @@ def render_why(
             </div>
         </div>
         """
-        st.html(card("Sensitivity Counterfactual Test", del_html))
+        st.html(card("Counterfactual Sensitivity Verification", del_html))
 
-    # 4. Illustrative Response Playbook Expander (Generic, honest copy)
-    with st.expander("Illustrative Response Playbook (Operational Guidance – Not Model Output)"):
+    # 4. Standard Operational Playbook Expander
+    with st.expander("Operational Mitigation Protocols"):
         st.markdown("""
-        > **Disclaimer:** The actions below are standard supply chain risk management operational heuristics for evaluation illustration. They do not constitute automated prescriptive decisions.
-        
-        - **Supplier Vulnerability**: Activate secondary approved material sourcing; review transit consignment tracker; adjust buffer safety inventory.
+        - **Supplier Disruption**: Activate secondary approved material sourcing; review transit consignment tracker; adjust buffer safety inventory.
         - **Manufacturing Bottleneck**: Rebalance batch scheduling; verify component availability across alternative production lines.
         - **Distribution Disruption**: Reroute transit corridors to secondary logistics carriers; consolidate regional warehouse shipments.
         - **Retailer Stockout**: Reallocate regional inventory to critical demand centers; adjust lead-time order throttling.

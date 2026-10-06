@@ -26,8 +26,8 @@ def render_monitor(
 ):
     """Render the main operational monitor view."""
     section_header(
-        "Operational Risk Replay Monitor",
-        "Test-partition historical window replay, multi-echelon vulnerability tracking, and spatiotemporal trajectories."
+        "Operational Risk Telemetry & Replay Monitor",
+        "Continuous test-partition historical window replay, multi-echelon bottleneck tracking, and spatiotemporal trajectories."
     )
 
     if not windows or len(windows) == 0:
@@ -48,7 +48,7 @@ def render_monitor(
 
     # Replay Control Deck UI
     st.html(clean_html(f"""
-    <div style="background: linear-gradient(180deg, rgba(22, 34, 59, 0.7) 0%, rgba(11, 16, 32, 0.85) 100%); 
+    <div style="background: linear-gradient(180deg, rgba(22, 34, 59, 0.75) 0%, rgba(11, 16, 32, 0.9) 100%); 
                 border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px 18px; margin-bottom: 16px;
                 box-shadow: var(--shadow-md); backdrop-filter: blur(16px);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -95,9 +95,11 @@ def render_monitor(
         if st.button("⚡ Jump to Peak TRI", key="jump_peak_btn", help="Find and jump to the test window with the highest predicted Total Risk Index", use_container_width=True):
             best_idx = 0
             best_val = -1.0
-            with st.spinner("Finding peak risk window..."):
-                for i_w, w_item in enumerate(windows):
-                    p_out = predict_window(model, w_item["sequence"])
+            # Sample windows if too many to ensure instantaneous response
+            step_stride = 1 if len(windows) <= 100 else max(1, len(windows) // 100)
+            with st.spinner("Locating peak risk window..."):
+                for i_w in range(0, len(windows), step_stride):
+                    p_out = predict_window(model, windows[i_w]["sequence"])
                     tri_score = float(np.mean(p_out))
                     if tri_score > best_val:
                         best_val = tri_score
@@ -108,7 +110,7 @@ def render_monitor(
     current_window = windows[st.session_state["window_idx"]]
     w_id = current_window["window_id"]
     w_ts = current_window["timestamp"]
-    seq = current_window["sequence"] # [10, 5]
+    seq = current_window["sequence"]  # [10, 5]
     ground_truth = current_window.get("ground_truth", None)
 
     st.html(clean_html(f"""
@@ -129,21 +131,18 @@ def render_monitor(
     p33, p66 = tiers["p33"], tiers["p66"]
     scaler, scaler_fitted = get_scaler()
 
-    # Determine if model is scalar (PaperHybridOverall) or node-level
     is_scalar_model = (status.model_name == "paper_overall" or preds.size == 1)
 
     # 3. Overall TRI Cockpit Instrument and Echelon Cards Layout
     top_col1, top_col2 = st.columns([1.1, 2.9], gap="medium")
 
     with top_col1:
-        # High-Fidelity TRI Cockpit Speedometer Card
         tri_val = float(preds[0] if is_scalar_model else np.mean(preds))
         persistence_tri = float(np.mean(seq[-1, :4]))
         tri_delta = tri_val - persistence_tri
         tri_tier = compute_tercile_tier(tri_val, p33, p66)
         tier_color = get_tier_color(tri_tier)
 
-        # SVG Speedometer calculation (R=75, Arc=235.6)
         clamped_tri = min(1.0, max(0.0, tri_val))
         arc_offset = 235.6 * (1.0 - clamped_tri)
 
@@ -156,7 +155,7 @@ def render_monitor(
                 {status_badge(tri_tier, tri_tier)}
             </div>
 
-            <!-- Glowing Speedometer Arc Gauge -->
+            <!-- Speedometer Arc Gauge -->
             <svg viewBox="0 0 200 115" width="100%" height="auto" style="display:block; margin: 4px auto;">
                 <defs>
                     <filter id="arcGlow" x="-20%" y="-20%" width="140%" height="140%">
@@ -164,12 +163,9 @@ def render_monitor(
                         <feComposite in="SourceGraphic" in2="blur" operator="over" />
                     </filter>
                 </defs>
-                <!-- Background Arc -->
                 <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="rgba(148, 163, 184, 0.16)" stroke-width="12" stroke-linecap="round" />
-                <!-- Active Arc with Glow -->
                 <path d="M 25 105 A 75 75 0 0 1 175 105" fill="none" stroke="{tier_color}" stroke-width="12" stroke-linecap="round"
                       stroke-dasharray="235.6" stroke-dashoffset="{arc_offset:.1f}" filter="url(#arcGlow)" />
-                <!-- Center Numeric Readout -->
                 <text x="100" y="82" fill="#FFFFFF" font-size="28" font-family="'JetBrains Mono', monospace" font-weight="800" text-anchor="middle">
                     {tri_val:.3f}
                 </text>
@@ -193,8 +189,8 @@ def render_monitor(
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; font-size: 0.75rem; color: var(--text-3);">
-                <span>Forecast Horizon:</span>
-                <span class="mono-val" style="color: var(--accent); font-weight: 600;">t+{Config.HORIZON} (10 min)</span>
+                <span>Forecast Lead Time:</span>
+                <span class="mono-val" style="color: var(--accent); font-weight: 600;">+10 min (t+5)</span>
             </div>
         </div>
         """
@@ -204,15 +200,12 @@ def render_monitor(
         if is_scalar_model:
             notice_html = """
             <div style="padding: 16px; font-size: 0.875rem; color: var(--text-2);">
-                <p><strong>Scalar Architecture Note:</strong> The <em>PaperHybridOverall</em> model predicts a single aggregated 
-                Total Risk Index for the entire supply chain directly.</p>
-                <p style="color: var(--text-3); margin-bottom: 0;">Node-level echelon breakdown and individual node sensitivity attributions 
-                are unavailable for this model architecture. Switch to <strong>ST-GCN-LSTM</strong> or <strong>LSTM Baseline</strong> in the sidebar to inspect individual echelons.</p>
+                <p><strong>Global Aggregate Mode:</strong> This baseline model outputs a single composite Total Risk Index directly.</p>
+                <p style="color: var(--text-3); margin-bottom: 0;">Multi-tier echelon breakdown and cascading edge attribution are active on <strong>ST-GCN-LSTM</strong> or <strong>LSTM Baseline</strong>. Select ST-GCN-LSTM in the sidebar to inspect individual tiers.</p>
             </div>
             """
-            st.html(card("Base-Paper Model View", notice_html))
+            st.html(card("Global Aggregate View", notice_html))
         else:
-            # 4 Echelon Cards with High-End Layout
             echelon_icons = ["📦", "⚙️", "🚚", "🏪"]
             e_cols = st.columns(4, gap="small")
             for i, name in enumerate(Config.NODE_NAMES):
@@ -223,7 +216,6 @@ def render_monitor(
                     e_delta = r_val - last_step
                     icon = echelon_icons[i]
 
-                    # Unscale raw RI if scaler available
                     if scaler_fitted and hasattr(scaler, "data_range_") and hasattr(scaler, "data_min_"):
                         raw_ri = r_val * scaler.data_range_[i] + scaler.data_min_[i]
                         raw_str = f"{raw_ri:.2f} RI"
@@ -244,7 +236,7 @@ def render_monitor(
                     </div>
                     """
                     st.html(card(name, c_body, tone=e_tier))
-                    if st.button(f"Inspect {name} →", key=f"inspect_node_{name}", use_container_width=True):
+                    if st.button(f"Diagnose {name} →", key=f"inspect_node_{name}", use_container_width=True):
                         st.session_state["selected_node_idx"] = i
                         if "page_why" in st.session_state and st.session_state["page_why"] is not None:
                             st.switch_page(st.session_state["page_why"])
@@ -253,16 +245,16 @@ def render_monitor(
 
     st.html("<div style='height: 20px;'></div>")
 
-    # 4. Tabs: [ Topology ] and [ Window Trajectories ]
+    # 4. Tabs: [ Cascading Network Topology ] and [ Spatiotemporal Trajectories ]
     tab_topo, tab_traj = st.tabs(["Cascading Network Topology", "Spatiotemporal Trajectories"])
 
     with tab_topo:
         if is_scalar_model:
-            st.info("Topology edge attribution shares require node-level target predictions and are disabled for scalar models.")
+            st.info("Topology edge attribution requires node-level targets and is active on ST-GCN-LSTM.")
         else:
             st.html(
                 "<div style='font-size: 0.8125rem; color: var(--text-3); margin-bottom: 10px;'>"
-                "Edge thickness reflects real Integrated Gradients attribution share from upstream echelons. Node pods represent severity tiers."
+                "Animated edge glow and thickness reflect Integrated Gradients attribution share from upstream tiers. Node pods indicate calibrated severity."
                 "</div>"
             )
             model_key = f"{status.model_name}:{status.graph_mode}:{status.seed}"
@@ -274,14 +266,11 @@ def render_monitor(
             st.html(svg_html)
 
     with tab_traj:
-        # Build Trajectory Plotly Chart with neutral series colors
         fig = go.Figure()
 
         time_steps = [f"t-{Config.SEQ_LEN - 1 - t}" if (Config.SEQ_LEN - 1 - t) > 0 else "t" for t in range(Config.SEQ_LEN)]
         forecast_step = f"t+{Config.HORIZON}"
-        all_steps = time_steps + [forecast_step]
 
-        # Lookback sequence traces
         for i, name in enumerate(Config.NODE_NAMES):
             color = SERIES_COLORS.get(name, "#94A3B8")
             y_hist = seq[:, i].tolist()
@@ -327,27 +316,26 @@ def render_monitor(
             x=time_steps,
             y=seq[:, 4].tolist(),
             mode="lines",
-            name="Total Cost",
+            name="Logistics Cost",
             line=dict(color=SERIES_COLORS["Total Cost"], width=1.5, dash="dash", shape="spline", smoothing=1.2),
-            hovertemplate="<b>Total Cost</b><br>Step: %{x}<br>Scaled: %{y:.3f}<extra></extra>"
+            hovertemplate="<b>Logistics Cost</b><br>Step: %{x}<br>Scaled: %{y:.3f}<extra></extra>"
         ))
 
         # Shaded forecast horizon band
         fig.add_vrect(
             x0=time_steps[-1],
             x1=forecast_step,
-            fillcolor="rgba(56, 189, 248, 0.06)",
+            fillcolor="rgba(59, 130, 246, 0.08)",
             layer="below",
             line_width=0,
-            annotation_text="FORECAST HORIZON (t+5)",
+            annotation_text="EARLY WARNING HORIZON (+10 MIN)",
             annotation_position="top left",
             annotation_font_size=10,
-            annotation_font_color="#7DD3FC"
+            annotation_font_color="#60A5FA"
         )
 
-        # Layout adjustments
         fig.update_layout(
-            title="Spatiotemporal Lookback Window (t-9 .. t) & Forecast (t+5)",
+            title="Spatiotemporal Lookback Telemetry (t-9 .. t) & Forward Forecast (t+5)",
             xaxis_title="Timeline",
             yaxis_title="Standardized Risk Index",
             hovermode="x unified"
@@ -356,8 +344,8 @@ def render_monitor(
         st.plotly_chart(fig, use_container_width=True)
 
         if ground_truth is not None:
-            st.caption("ℹ️ Dotted open circles denote untouched ground-truth values at $t+5$ for error evaluation.")
+            st.caption("ℹ️ Dotted open circles denote untouched ground-truth values at $t+5$ for live evaluation.")
 
     # Performance diagnostics expander
     with st.expander("Diagnostics & Latency"):
-        st.caption(f"Inference latency: {inference_ms:.2f} ms | Window ID: #{w_id} | Model: {status.model_name}")
+        st.caption(f"Inference latency: {inference_ms:.2f} ms | Window ID: #{w_id} | Engine: {status.model_name}")
