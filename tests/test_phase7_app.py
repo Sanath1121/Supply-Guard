@@ -32,6 +32,7 @@ from tests.test_phase7_smoke_apptest import TestPhase7AppTestSmoke
 class TestPhase7App(unittest.TestCase):
 
     def setUp(self):
+        
         self.scaler = MinMaxScaler()
         dummy_train = np.array([
             [0.0, 0.0, 0.0, 0.0, 10.0],
@@ -172,3 +173,5 @@ class TestPhase7App(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+

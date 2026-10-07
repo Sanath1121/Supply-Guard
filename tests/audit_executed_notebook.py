@@ -1,7 +1,7 @@
 """Audit Executed Notebook Script.
 
 Empirically verifies:
-1. notebooks/test_executed.ipynb exists and executed cleanly.
+1. notebooks/01_EDA.ipynb exists and executed cleanly.
 2. Every code cell has a non-null execution_count.
 3. Zero code cells contain an error output (no ename, evalue, or traceback).
 4. Final cell is Markdown and contains all required Gate 1 decision elements:
@@ -129,5 +129,6 @@ def audit_notebook(nb_path_str: str):
         print("\n--> DECISION TABLE AUDIT PASSED: All required decision elements verified.")
 
 if __name__ == "__main__":
-    target = sys.argv[1] if len(sys.argv) > 1 else "notebooks/test_executed.ipynb"
+    target = sys.argv[1] if len(sys.argv) > 1 else "notebooks/01_EDA.ipynb"
     audit_notebook(target)
+

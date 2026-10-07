@@ -50,9 +50,11 @@ def download_dataset(url: str, dest_path: str):
             if chunk:
                 f.write(chunk)
                 downloaded += len(chunk)
-                if total_size > 0:
+                if total_size > 0 and downloaded <= total_size:
                     percent = (downloaded / total_size) * 100
                     print(f"  Downloaded {downloaded / (1024*1024):.1f} MB / {total_size / (1024*1024):.1f} MB ({percent:.1f}%)", end="\r")
+                else:
+                    print(f"  Downloaded {downloaded / (1024*1024):.1f} MB", end="\r")
     print(f"\n[INFO] Download completed: {dest_path}")
 
 
@@ -89,6 +91,9 @@ def validate_dataset(filepath: str):
     print(f"File Size        : {file_size_mb:.2f} MB")
     print(f"SHA-256 Checksum : {sha}")
     print(f"Pinned Commit    : {PINNED_COMMIT}")
+    
+    expected_sha = "d2e71ae7f55fa70ef498fecb9b6db0c9fd59688f17f8ad3c27c7576f09e76ff3"
+    assert sha == expected_sha, f"SHA-256 mismatch! Expected {expected_sha}, got {sha}"
 
     # 2. Schema check
     df = pd.read_csv(filepath)

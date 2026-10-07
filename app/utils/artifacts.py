@@ -54,6 +54,11 @@ def get_scaler() -> Tuple[Optional[MinMaxScaler], bool]:
 def get_checkpoint_filename(model_name: str, graph_mode: str, seed: int) -> str:
     """Return the exact expected checkpoint filename matching training/train.py."""
     if model_name == "st_gcn_lstm":
+        # Support both canonical short forms (dir, sym) and descriptive names (directed, symmetric)
+        short_mode = "dir" if "dir" in graph_mode else ("sym" if "sym" in graph_mode else graph_mode)
+        short_file = f"st_gcn_lstm_{short_mode}_seed{seed}.pt"
+        if os.path.exists(os.path.join(Config.CKPT_DIR, short_file)):
+            return short_file
         tag = f"st_gcn_lstm_{graph_mode}"
     else:
         tag = model_name
@@ -171,10 +176,10 @@ def get_test_windows(max_windows: Optional[int] = 500) -> Tuple[List[Dict[str, A
 def predict_window(model: torch.nn.Module, seq: np.ndarray) -> np.ndarray:
     """Run forward prediction on a single [10, 5] sequence.
     
-    Returns [4] for node models, or [1] for scalar models.
+    Returns 1D array: [4] for node models, or [1] for scalar models.
     """
     model.eval()
     with torch.no_grad():
         inp = torch.tensor(seq, dtype=torch.float32).unsqueeze(0) # [1, 10, 5]
         out = model(inp).squeeze(0).cpu().numpy()
-        return out
+        return np.atleast_1d(out)

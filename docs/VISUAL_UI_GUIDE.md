@@ -1,171 +1,260 @@
-# SupplyGuard — Visual Interface Guide & Feature Tour
+# SupplyGuard — Visual Interface Guide & Academic Defense Companion
 
-> **Document Purpose**: A visual, beginner-friendly walkthrough of the SupplyGuard Dashboard with high-fidelity UI previews.  
-> **Target Audience**: Business Stakeholders, Supply Chain Executives, Developers, and Evaluators.  
-> **Key Analogy**: Think of SupplyGuard as a **weather radar and Google Maps for supply chains**—alerting you to incoming storms 10 minutes before impact.
+> **Document Classification**: Comprehensive Visual Walkthrough & Project Defense Manual  
+> **Target Audience**: Academic Evaluators, Project Guides, Viva Examiners, and Industrial Stakeholders  
+> **Key Analogy**: Think of SupplyGuard as a **weather radar and flight simulator for modern supply chains**—spotting cascading bottlenecks 10 minutes before they happen and explaining exactly how to stop them.
 
 ---
 
 ## Table of Contents
-1. [The 30-Second Elevator Pitch: What Are We Building?](#1-the-30-second-elevator-pitch-what-are-we-building)
-2. [Screen 1: Executive Overview Deck](#2-screen-1-executive-overview-deck)
-3. [Screen 2: Operational Risk Monitor (The Live Cockpit)](#3-screen-2-operational-risk-monitor-the-live-cockpit)
-4. [Screen 3: Diagnostic XAI (The AI Detective)](#4-screen-3-diagnostic-xai-the-ai-detective)
-5. [Screen 4: Production Benchmarks (The Proof / Report Card)](#5-screen-4-production-benchmarks-the-proof--report-card)
-6. [Screen 5: Incident Dossier & Sandbox](#6-screen-5-incident-dossier--sandbox)
-7. [Quick Reference: How to Explain Each Feature to a Non-Technical Client](#7-quick-reference-how-to-explain-each-feature-to-a-non-technical-client)
+1. [The 60-Second Elevator Pitch: What Problem Are We Solving?](#1-the-60-second-elevator-pitch-what-problem-are-we-solving)
+2. [Visual Architecture: The 6 Core Operational Views](#2-visual-architecture-the-6-core-operational-views)
+   - [View 1: Executive Overview Deck](#view-1-executive-overview-deck)
+   - [View 2: Operational Risk Monitor (The Live Cockpit)](#view-2-operational-risk-monitor-the-live-cockpit)
+   - [View 3: Diagnostic XAI (The AI Detective)](#view-3-diagnostic-xai-the-ai-detective)
+   - [View 4: Production Benchmarks (The Scientific Report Card)](#view-4-production-benchmarks-the-scientific-report-card)
+   - [View 5: Incident Dossier Export (The Compliance Hub)](#view-5-incident-dossier-export-the-compliance-hub)
+   - [View 6: Stress-Test Sandbox (The "What-If" Flight Simulator)](#view-6-stress-test-sandbox-the-what-if-flight-simulator)
+3. [Step-by-Step Presentation Script for Your Academic Guide](#3-step-by-step-presentation-script-for-your-academic-guide)
+4. [Viva Defense Cheat-Sheet: Top 5 Examiner Questions & Model Answers](#4-viva-defense-cheat-sheet-top-5-examiner-questions--model-answers)
+5. [Quick Reference Feature Cheat Table](#5-quick-reference-feature-cheat-table)
 
 ---
 
-## 1. The 30-Second Elevator Pitch: What Are We Building?
+## 1. The 60-Second Elevator Pitch: What Problem Are We Solving?
 
-Imagine a 4-step delivery pipeline:
+Consider a standard multi-echelon industrial supply chain:
 
-$$\text{📦 Supplier} \longrightarrow \text{⚙️ Factory (Manufacturer)} \longrightarrow \text{🚚 Logistics (Distributor)} \longrightarrow \text{🏪 Store (Retailer)}$$
+$$\text{📦 Raw Material Supplier} \longrightarrow \text{⚙️ Tier-1 Manufacturer} \longrightarrow \text{🚚 Logistics Distributor} \longrightarrow \text{🏪 Retail Fulfillment}$$
 
-In traditional supply chains, if a supplier has an equipment failure, **nobody downstream knows until the factory stops working and trucks run empty**. This creates a devastating domino effect costing millions.
+In traditional operations, supply chains suffer from the **Bullwhip Effect** and **Information Silos**:
+* If a Tier-1 supplier suffers a hydraulic press failure or customs delay, **downstream factories and distribution centers don't find out until parts fail to arrive**.
+* By the time the disruption is visible, assembly lines freeze, logistics trucks run empty, and retailers face stockouts—resulting in millions of dollars in cascading losses.
 
-**SupplyGuard solves this**:
-* It continuously monitors telemetry from all 4 tiers simultaneously.
-* It predicts cascading bottlenecks **10 minutes before they happen**.
-* It explains in plain English **who caused the delay** and **what immediate action managers should take**.
-
----
-
-## 2. Screen 1: Executive Overview Deck
-
-![SupplyGuard Executive Overview](assets/images/01_overview_view.jpg)
-
-### What You Are Seeing in This Screen:
-
-1. **Top KPI Hero Cards (The Vital Stats)**:
-   * **Core AI Engine (`ST-GCN-LSTM`)**: Tells the user that our spatiotemporal network brain is active.
-   * **Early Warning Lead Time (`+10 Mins`)**: The key business value. Gives operators a 10-minute head start.
-   * **Echelon Coverage (`4 Tiers`)**: Full end-to-end visibility from Raw Materials to Retail.
-   * **Data Verification (`0 Leakage`)**: Guarantees the AI was tested on untouched historical data without cheating or peeking ahead.
-
-2. **Operational Readiness Checklist (Left Box)**:
-   * Like a pre-flight inspection for a pilot.
-   * Green checkmarks (✅) verify that data feeds, trained AI weights, and system connectors are online and healthy.
-
-3. **Production Architecture Specifications (Right Box)**:
-   * The system contract: lookback window (past 20 minutes), early warning horizon (10 minutes into the future), and data refresh rate (every 2 minutes).
-
-4. **Operational Severity Protocols & Action Matrix (Bottom Box)**:
-   * Standardizes what managers must do when an alert triggers:
-     * 🟢 **Low Severity (Green)**: Normal operations. Monitor routine metrics.
-     * 🟡 **Medium Severity (Amber)**: Emerging transit lag or capacity strain. Alert downstream distribution hubs.
-     * 🔴 **High Severity (Red)**: Critical disruption imminent! Activate emergency buffer stock and re-route freight.
+### How SupplyGuard Solves This:
+* **Spatiotemporal Deep Learning (`ST-GCN-LSTM`)**: SupplyGuard models the physical network as a directed topological graph while tracking time-series telemetry across all 4 tiers simultaneously.
+* **+10 Minute Early Warning Lead Time**: Predicts disruption severity up to 10 minutes into the future, giving plant managers actionable reaction time.
+* **Diagnostic Explainability (XAI)**: Demystifies the "black box" by calculating exact feature and temporal attribution, showing which upstream factor caused the disruption.
+* **Stress-Test Simulation Sandbox**: Allows risk planners to run counterfactual "what-if" disaster scenarios safely in memory without altering production databases.
 
 ---
 
-## 3. Screen 2: Operational Risk Monitor (The Live Cockpit)
+## 2. Visual Architecture: The 6 Core Operational Views
 
-![SupplyGuard Risk Monitor](assets/images/02_monitor_view.jpg)
+---
 
-### What You Are Seeing in This Screen:
+### View 1: Executive Overview Deck
+*The Pre-Flight Inspection Board for Supply Chain Leadership*
 
-1. **The Timeline Scrubber (Top Slider & Controls)**:
-   * Like a security camera replay bar.
-   * Drag the slider or click `◀` / `▶` to travel through time and inspect how risks evolved every 2 minutes.
-   * **⚡ "Jump to Peak TRI" Button**: The emergency shortcut! One click instantly jumps to the single worst disaster in the test set.
+![Executive Overview Deck](assets/images/01_overview_view.jpg)
 
+#### What You Are Seeing in This Screen:
+1. **Top KPI Hero Cards (System Vitals)**:
+   - **Core AI Engine (`ST-GCN-LSTM`)**: Confirms that the hybrid spatiotemporal neural network is active and running.
+   - **Early Warning Lead Time (`+10 Mins`)**: The core business value proposition—providing 10-minute forward lead time before disruptions cascade.
+   - **Echelon Coverage (`4 Tiers`)**: Full topological visibility across Supplier, Manufacturer, Distributor, and Retailer.
+   - **Data Verification (`0 Leakage`)**: Verifies that time-series splits strictly respect chronological order with zero forward-looking data leakage.
+2. **Operational Readiness Checklist (Left Panel)**:
+   - A pre-flight inspection checklist. Green badges verify that telemetry feeds, calibrated scalers, and model checkpoint weights are loaded and operational.
+3. **Production Architecture Specifications (Right Panel)**:
+   - Details the mathematical contract: 20-minute lookback window ($T=10$ steps at 2-minute cadence), 10-minute forecast horizon ($H=5$ steps), and 4-node directed adjacency matrix.
+4. **Operational Severity Protocols & Action Matrix (Bottom Panel)**:
+   - Standard operating procedure (SOP) guidance for plant operators:
+     - 🟢 **Low Risk (Green)**: Nominal baseline operations; continue standard monitoring.
+     - 🟡 **Medium Risk (Amber)**: Emerging transit delay or capacity bottleneck; alert downstream hubs.
+     - 🔴 **High Risk (Red)**: Critical cascading failure imminent; engage safety stock and initiate alternative freight routing.
+
+---
+
+### View 2: Operational Risk Monitor (The Live Cockpit)
+*Real-Time Telemetry Tracking & Cascading Risk Propagation*
+
+![Operational Risk Monitor](assets/images/02_monitor_view.jpg)
+
+#### What You Are Seeing in This Screen:
+1. **Interactive Timeline Replay Scrubber (Top Controls)**:
+   - Allows operators to rewind and fast-forward through historical telemetry streams step-by-step.
+   - **⚡ "Jump to Peak TRI" Button**: Instantly jumps the scrubber to the worst recorded disruption in the evaluation set for rapid stress evaluation.
 2. **Total Risk Index (TRI) Speedometer Gauge (Left Gauge)**:
-   * The "heart monitor" of the entire supply chain.
-   * Ranges from $0.00$ (completely safe) to $1.00$ (total system collapse).
-   * In this preview, it reads **`0.742 HIGH SEVERITY`**, triggering an amber-red needle warning.
-   * Displays the **Delta ($\Delta$)** compared to right now so you know if things are getting better or worse.
-
-3. **The 4 Echelon Risk Cards (Center Row)**:
-   * Individual health cards for **Supplier**, **Manufacturer**, **Distributor**, and **Retailer**.
-   * Shows each tier's risk score and color-coded severity tag.
-   * Notice how **Supplier (`0.812`)** and **Manufacturer (`0.742`)** are red, while **Distributor (`0.415`)** is amber, and **Retailer (`0.210`)** is still green. The disaster is currently traveling downstream!
-   * Click **"Diagnose Node →"** on any card to find out why that tier is struggling.
-
-4. **Cascading Network Topology (Bottom Flow Diagram)**:
-   * Visual map showing the 4 steps connected by glowing blue pipes with animated moving pulses.
-   * **Attribution Badges on the Pipes (e.g. `68%`, `70%`)**: Reveals the domino effect! It mathematically proves how much risk traveled from the upstream partner to the downstream partner.
+   - The aggregate "blood pressure" of the entire supply chain, ranging from $0.00$ (optimal) to $1.00$ (severe disruption).
+   - Shows the immediate delta ($\Delta$) compared to the prior step, alerting managers whether conditions are stabilizing or deteriorating.
+3. **Echelon Risk Cards (Center Row)**:
+   - Real-time health scorecards for all 4 nodes: **Supplier**, **Manufacturer**, **Distributor**, and **Retailer**.
+   - Displays both scaled risk probabilities and unscaled physical engineering units.
+   - Direct shortcut button **"Diagnose Node →"** links straight into the Diagnostic XAI view for deeper investigation.
+4. **Cascading Network Topology Graph (Bottom Flow Visualizer)**:
+   - An interactive, directed graph mapping physical supply flow from Tier-1 suppliers down to retail stores.
+   - **Attribution Badges on Edges (e.g., 68%, 70%)**: Quantifies upstream-to-downstream risk spillover, pinpointing exactly where the domino effect is traveling.
 
 ---
 
-## 4. Screen 3: Diagnostic XAI (The AI Detective)
+### View 3: Diagnostic XAI (The AI Detective)
+*Demystifying the Black Box with Transparent Feature & Temporal Attribution*
 
-![SupplyGuard Diagnostic XAI](assets/images/03_xai_view.jpg)
+![Diagnostic XAI](assets/images/03_xai_view.jpg)
 
-### What You Are Seeing in This Screen:
-
-Most AI models are "black boxes"—they spit out a number, but cannot explain why. **SupplyGuard provides complete transparency.**
-
-1. **Target Echelon Selector (Top Radio Buttons)**:
-   * Choose which company you want to inspect: Supplier, Manufacturer, Distributor, or Retailer.
-
-2. **AI Diagnostic Narrative (Top Card)**:
-   * Auto-generated diagnosis in plain English:
-     > *"Model predicts HIGH risk for Manufacturer. Primary upstream driver is Supplier delays (contributing 62.4% of total gradient saliency), concentrated 4 minutes ago."*
-
-3. **Action Directive Banner (Blue Highlighted Box)**:
-   * Clear, actionable instructions for operations managers:
-     > *⚙️ Plant Action: Rebalance batch scheduling; verify backup parts across alternate production lines.*
-
-4. **Feature Signed Attribution (Left Chart)**:
-   * **Red bars**: Factors pushing risk **UP** (e.g., supplier material shortages or fuel cost inflation).
-   * **Green bars**: Factors keeping risk **DOWN** (e.g., stable retailer inventory).
-
-5. **Temporal Saliency Profile (Right Chart)**:
-   * Shows **when** the issue started across time steps $t-9$ to $t_0$.
-   * Tells you if this was a sudden lightning shock ($t_0$) or a slow backlog brewing over 15 minutes.
-
-6. **Axiomatic Completeness & Counterfactual Test (Bottom Cards)**:
-   * **Completeness Audit**: Mathematical proof verifying that the attribution adds up to 100% of the prediction.
-   * **Sensitivity Test**: Allows managers to simulate: *"What if we fix the supplier delay right now? How much will factory risk drop?"*
+#### What You Are Seeing in This Screen:
+1. **Target Node Selector (Top Navigation)**:
+   - Lets operators select any specific echelon (e.g., Manufacturer) to inspect its prediction drivers.
+2. **AI Diagnostic Narrative & Action Directive (Top Cards)**:
+   - Translates complex neural network gradient attributions into clear, human-readable operational advice:
+     > *"Model predicts HIGH risk for Manufacturer. Primary upstream driver is Supplier delivery variance (accounting for 62.4% of total gradient saliency) originating 4 minutes prior."*
+   - Includes prescriptive action directives (e.g., *"Rebalance batch schedule; activate local buffer inventory"*).
+3. **Feature Signed Attribution Breakdown (Left Chart)**:
+   - **Red Bars**: Factors driving the risk score **up** (e.g., component stockout, transportation dwell time).
+   - **Green Bars**: Factors dampening risk and maintaining stability (e.g., healthy finished goods inventory).
+4. **Temporal Saliency Profile (Right Chart)**:
+   - Illustrates **when** the disturbance originated across the lookback horizon ($t-9$ to $t_0$).
+   - Differentiates between sudden flash shocks ($t_0$) and slow-brewing systemic backlogs.
+5. **Axiomatic Completeness & Counterfactual Sensitivity (Bottom Cards)**:
+   - Verifies that feature attributions mathematically sum to the model's output delta (axiom of completeness).
+   - Provides counterfactual testing: *"If supplier variance drops by 40%, predicted factory risk falls from High to Low."*
 
 ---
 
-## 5. Screen 4: Production Benchmarks (The Proof / Report Card)
+### View 4: Production Benchmarks (The Scientific Report Card)
+*Empirical Proof that Spatiotemporal Graph Modeling Outperforms Baselines*
 
-![SupplyGuard Production Benchmarks](assets/images/04_benchmarks_view.jpg)
+![Production Benchmarks](assets/images/04_benchmarks_view.jpg)
 
-### What You Are Seeing in This Screen:
-
-This is the evidence you present to clients, management, or evaluators to prove the AI is scientifically validated.
-
-1. **SLA Validation Scorecards (Top 4 Cards)**:
-   * **Multi-Node Coordinated Accuracy**: Proves tracking all 4 tiers simultaneously beats single-node models.
-   * **Spatiotemporal Topology Gain**: Proves that feeding the physical graph structure into the AI makes it significantly smarter than a standard graph-free LSTM.
-   * **+10 Min Early Warning Superiority**: Proves our AI decisively beats naive guessing ("persistence") at the 10-minute horizon.
-   * **Critical Incident Recall**: Proves that when severe disruptions happen, the AI catches over 90% of them with minimal false alarms.
-
-2. **Leaderboard Table (Middle Data Grid)**:
-   * An empirical comparison table ranking **SupplyGuard ST-GCN-LSTM**, **Ablation LSTM**, **Global Aggregate**, **Ridge-AR**, and **Naive Persistence** across standard error metrics (MSE, MAE, RMSE, and $R^2$) tested across 5 random seeds.
-
+#### What You Are Seeing in This Screen:
+1. **Research Question (RQ) Verdict Scorecards (Top Cards)**:
+   - **RQ1 (+10 Min Early Warning Superiority)**: Verifies that ST-GCN-LSTM significantly outperforms naive persistence baselines.
+   - **RQ2 (Graph Topology Gain)**: Proves that incorporating physical graph connectivity reduces prediction error compared to a flat, topology-free LSTM.
+   - **RQ3 (Directed Graph Efficacy)**: Proves that modeling physical downstream flow (directed edges) beats isotropic symmetric assumptions.
+   - **RQ4 (Attribution Saliency Quality)**: Confirms gradient attributions maintain mathematical consistency across test samples.
+2. **Model Leaderboard Table (Middle Data Grid)**:
+   - Ranks all candidate architectures across MSE, MAE, RMSE, and $R^2$ metrics across 5 independently seeded evaluation runs.
 3. **Test MSE Error-Whisker Bar Chart (Bottom Chart)**:
-   * Displays prediction error (lower bar = better model).
-   * Notice the vertical "whiskers" on each bar: these represent standard error across the 5 independent seeds, proving our AI's lead is statistically rock-solid.
+   - Visualizes mean squared error alongside standard error bars, demonstrating that performance advantages are statistically sound.
 
 ---
 
-## 6. Screen 5: Incident Dossier & Sandbox
+### View 5: Incident Dossier Export (The Compliance Hub)
+*Cryptographically Provenance-Stamped Executive & Regulatory Briefings*
 
-* **Incident Dossier (`/export`)**:
-  * In a crisis, managers need to brief leadership immediately.
-  * One click generates a clean, cryptographically hashed Markdown audit report containing the active timestamp, risk scores, root cause attribution, and recommended actions.
-  * Click **"📥 Download Incident Report (.md)"** to save and distribute the briefing.
+![Incident Dossier Export](assets/images/05_export_view.jpg)
 
-* **Stress-Test Sandbox (`/sandbox`)**:
-  * A safe "flight simulator" environment.
-  * Run preset disaster simulations like **"Upstream Supplier Blackout"** or upload custom CSV spreadsheets to test novel what-if scenarios without touching historical data.
+#### What You Are Seeing in This Screen:
+1. **Cryptographic Provenance Stamp**:
+   - Every incident report includes a SHA-256 hash badge of the model checkpoint weights, the exact evaluation timestamp, and the test split certification.
+   - Guarantees complete audit reproducibility for enterprise governance.
+2. **Multi-Step Risk Trajectory Table ($T+1$ to $T+6$)**:
+   - Tabulates projected risk indices across future time horizons with color-coded severity tags, giving executives an at-a-glance timeline of the expected disruption progression.
+3. **Integrated Sensitivity Attribution Summary**:
+   - Embeds the top quantitative risk drivers directly into the audit document, eliminating guesswork during post-incident reviews.
+4. **One-Click Export Controls**:
+   - Prominent **"Download Audit Dossier (.md)"** button generates clean, standalone Markdown files ready for executive review or integration into Jira/ServiceNow ticketing systems.
 
 ---
 
-## 7. Quick Reference: How to Explain Each Feature to a Non-Technical Client
+### View 6: Stress-Test Sandbox (The "What-If" Flight Simulator)
+*Counterfactual Disaster Simulation Without Production System Risk*
 
-| Feature | Everyday Analogy | What to Say in 5 Seconds |
+![Stress-Test Sandbox](assets/images/06_sandbox_view.jpg)
+
+#### What You Are Seeing in This Screen:
+1. **Disaster Simulation Scenario Presets**:
+   - **Preset 1: Upstream Supplier Blackout**: Simulates catastrophic component shortages at Tier-1 suppliers.
+   - **Preset 2: Transit Port Congestion**: Injects sudden multi-hour delivery delays between factory and logistics hubs.
+   - **Preset 3: Downstream Demand Surge**: Simulates sudden order spikes at retail centers to observe upstream bullwhip amplification.
+2. **Custom CSV / Telemetry Data Uploader**:
+   - Risk engineers can upload novel CSV datasets or synthetic stress logs to test how the neural network responds to unprecedented black-swan events.
+3. **Real-Time Delta Impact Gauges ($\Delta$ TRI)**:
+   - Displays real-time delta meters showing the exact percentage shift in systemic risk when a disaster is injected versus the baseline state.
+4. **Interactive Shockwave Propagation Graph**:
+   - Compares the baseline network flow against the simulated stress state, showing how shockwaves ripple through downstream echelons in real time.
+
+---
+
+## 3. Step-by-Step Presentation Script for Your Academic Guide
+
+*Use this structured 5-minute presentation script when demonstrating your project to your academic supervisor, project committee, or viva examiners.*
+
+---
+
+### Phase 1: The Hook & Problem Statement (1 Minute)
+> *"Respected guide / committee members, modern manufacturing and distribution networks are deeply interdependent. However, existing supply chain monitoring tools are fundamentally **reactive**—they record what has already gone wrong.*
+> 
+> *Our project, **SupplyGuard**, transforms this into a **predictive and explainable early warning system**. By modeling the physical supply chain as a directed spatiotemporal graph using **ST-GCN-LSTM**, we predict cascading disruptions **10 minutes in advance**, pinpoint the primary upstream drivers, and provide actionable mitigation steps."*
+
+---
+
+### Phase 2: Live UI Demonstration Flow (2.5 Minutes)
+
+#### Step 1: Show the Executive Overview Deck
+> *"Here on the **Executive Overview**, the system displays its operational health. We see our 4 echelons covered, our 10-minute lead time horizon, and a verification badge confirming zero data leakage across our time-series splits."*
+
+#### Step 2: Navigate to the Operational Risk Monitor
+> *"Next, we open the **Risk Monitor**. This is the operational command center. Notice our **Total Risk Index (TRI)** speedometer. As I move the timeline scrubber forward, you can observe a disruption starting at the Supplier node. Notice how the attribution badge on the directed edge displays a 68% risk transfer to the Manufacturer. The domino effect is visible before the factory even halts."*
+
+#### Step 3: Drill Down into Diagnostic XAI
+> *"Most neural networks are black boxes. In **Diagnostic XAI**, our model explains its reasoning. By computing gradient-based sensitivity attributions across time steps and graph neighbors, the dashboard tells plant managers in plain English: 'Supplier component variance from 4 minutes ago is driving 62% of the factory's risk'. It also gives an explicit operational directive on how to respond."*
+
+#### Step 4: Test Counterfactuals in the Stress-Test Sandbox
+> *"To ensure resilience against rare disasters, we built the **Stress-Test Sandbox**—a safe flight simulator. Here, I can trigger an 'Upstream Supplier Blackout' scenario. In real time, the model executes a forward pass on the modified tensor, showing how the disruption ripples downstream and displaying the exact delta in systemic risk."*
+
+#### Step 5: Export the Incident Dossier & Present Benchmarks
+> *"Finally, with one click in the **Incident Dossier**, operators can download an audit-ready, cryptographically stamped Markdown report. In the **Production Benchmarks** view, we provide empirical evidence across 5 random seeds proving our ST-GCN-LSTM model beats traditional baselines with statistically significant error reductions."*
+
+---
+
+### Phase 3: Conclusion & Impact (30 Seconds)
+> *"In summary, SupplyGuard bridges the gap between theoretical deep learning and practical supply chain operations. It combines predictive accuracy, mathematical explainability, and interactive risk simulation in a single production-ready interface."*
+
+---
+
+## 4. Viva Defense Cheat-Sheet: Top 5 Examiner Questions & Model Answers
+
+### Q1: "Why did you use ST-GCN-LSTM instead of a standard LSTM or a Transformer?"
+* **Short Answer**: Traditional LSTMs treat all data as flat Euclidean vectors, ignoring the physical pipeline connections between suppliers and factories. Transformers have $O(N^2)$ attention complexity and can easily overfit on small, fixed topologies.
+* **Technical Detail**: The **Spatio-Temporal Graph Convolutional Network (ST-GCN)** uses normalized graph Laplacian operations to model localized topological dependencies between upstream and downstream nodes, while the **LSTM** captures temporal memory across sequential time steps. This hybrid architecture captures spatial propagation that flat models completely miss.
+
+---
+
+### Q2: "How did you ensure that there is zero data leakage in your time-series forecasting?"
+* **Short Answer**: We used strict chronological walk-forward splitting and fitted all preprocessing scalers strictly on the training set.
+* **Technical Detail**: In time-series tasks, shuffling data or computing global min-max statistics across the entire dataset causes future information to leak into past predictions. We enforced a temporal split where the test set strictly follows the training period in time, and the MinMaxScaler was calibrated exclusively on training data and saved as an isolated artifact (`scaler.joblib`).
+
+---
+
+### Q3: "Explain how your Diagnostic XAI works. Is it just a heuristic?"
+* **Short Answer**: It is not a heuristic; it is based on axiomatic gradient attribution techniques.
+* **Technical Detail**: We calculate the partial derivatives of the output risk score with respect to input feature dimensions and historical time steps:
+
+$$\text{Attribution}(x_{i,t}) = x_{i,t} \cdot \frac{\partial \hat{y}}{\partial x_{i,t}}$$
+
+We verify the attribution against the **Completeness Axiom**, ensuring that the sum of attributions equals the model's prediction delta relative to a neutral baseline. This provides mathematically sound explanations for which node and feature drove the alert.
+
+---
+
+### Q4: "How does the Sandbox run 'what-if' simulations without corrupting production data?"
+* **Short Answer**: The Sandbox performs isolated in-memory tensor transformations without writing to the underlying database.
+* **Technical Detail**: When a scenario is selected (e.g., Supplier Blackout), the application clones the active feature tensor into memory, applies the perturbation mask (e.g., scaling supplier inventory variance by $+300\%$), passes the tensor through the model's PyTorch forward pass, and calculates the delta against the unmodified baseline tensor.
+
+---
+
+### Q5: "Why did you choose Streamlit rather than building a React or Next.js frontend?"
+* **Short Answer**: Streamlit enables direct, zero-overhead execution of PyTorch tensors and Plotly graph objects directly within Python.
+* **Technical Detail**: In industrial telemetry and ML prototyping, building a decoupled React/Node stack requires writing REST/GraphQL serialization layers for multi-dimensional numpy tensors, adding network latency and engineering overhead. Streamlit allows direct in-process inference, sub-second reactivity, and seamless integration with our PyTorch and NetworkX pipelines.
+
+---
+
+## 5. Quick Reference Feature Cheat Table
+
+| Feature Name | Everyday Analogy | What to Say in 5 Seconds |
 |---|---|---|
-| **Timeline Scrubber** | YouTube Video Timeline | *"Lets you rewind and fast-forward to see how supply chain risks unfold every 2 minutes."* |
-| **TRI Speedometer** | Car Speedometer / Heart Rate Monitor | *"One single gauge showing if your entire 4-tier supply chain is safe, strained, or in critical danger."* |
-| **Echelon Cards** | Individual Medical Health Cards | *"Gives an individual health check score for your Supplier, Factory, Logistics, and Store."* |
-| **Topology Diagram** | Subway Map with Flow Lights | *"Shows the real delivery route, with moving pulses showing exactly how a supplier delay spills into the factory."* |
-| **Diagnostic Narrative** | Doctor's Prescription | *"Explains in plain English what went wrong and gives the manager exact steps to fix it."* |
-| **Feature Bar Chart** | Nutrition Label / Ingredient Breakdown | *"Shows which specific variables (e.g. freight cost vs parts shortage) caused the fever."* |
-| **Benchmark Scorecards** | Consumer Reports / Crash Test Ratings | *"Proves our AI beats standard industry baselines across 5 independent scientific test runs."* |
-| **Download Dossier** | One-Click Export PDF | *"Generates a signed incident briefing in one second to email to senior leadership."* |
+| **Executive Overview** | Aircraft Pre-Flight Board | *"Shows system readiness, data integrity, and operational SOP guidelines."* |
+| **Timeline Scrubber** | DVR Replay Bar | *"Lets operators scrub through historical telemetry step-by-step to watch risks evolve."* |
+| **Total Risk Index (TRI)** | System Blood Pressure Gauge | *"A single composite score from 0.00 to 1.00 indicating overall supply chain stability."* |
+| **Echelon Health Cards** | Individual Medical Vitals | *"Shows individual risk scores and physical units for Supplier, Factory, Logistics, and Store."* |
+| **Dynamic Topology Graph** | Subway Map with Flow Indicators | *"Visualizes physical supply flow with animated pulses and edge-share attribution percentages."* |
+| **Diagnostic XAI Narrative** | Doctor's Diagnosis & Prescription | *"Explains in plain English what caused the risk and tells plant managers what action to take."* |
+| **Signed Attribution Bar Chart** | Nutrition Label Breakdown | *"Shows which specific variables pushed risk up versus which variables kept it stable."* |
+| **Production Benchmarks** | Independent Crash Test Ratings | *"Provides empirical proof that our graph AI outperforms standard baselines across 5 test seeds."* |
+| **Incident Dossier Export** | Flight Data Black Box Report | *"Generates a cryptographically hashed, audit-ready Markdown incident report with one click."* |
+| **Stress-Test Sandbox** | Flight Simulator for Disasters | *"A safe environment to simulate supplier blackouts and black-swan shocks without touching live data."* |
+
+---
+
+*Authored by the SupplyGuard Engineering Team for Academic Project Evaluation and Viva Defense.*

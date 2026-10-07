@@ -73,3 +73,4 @@ Running the hardened pipeline on the real `SCRM_timeSeries_2018_train.csv` file 
 - **Gate 2 Status:** **PASSED & APPROVED**
 - **Readiness:** The data ingestion pipeline is now 100% hardened, anti-leakage guaranteed, and structurally prepared to begin passing tensors into PyTorch models.
 - **Approved Next Step:** **Phase 3 — Graph Topology Implementation** (`src/graph_builder.py`).
+

@@ -61,11 +61,24 @@ def run_phase_test(phase_num: int) -> bool:
     elapsed = time.time() - start_time
 
     print("-" * 70)
-    if result.wasSuccessful():
-        print(f"--> GATE {phase_num} [PASSED] in {elapsed:.2f}s ({result.testsRun} checks passed)")
+    n_run = result.testsRun
+    n_skipped = len(result.skipped)
+    n_failures = len(result.failures)
+    n_errors = len(result.errors)
+    n_passed = n_run - n_failures - n_errors - n_skipped
+
+    if n_run > 0 and n_skipped == n_run:
+        print(f"--> GATE {phase_num} [SKIPPED / UNIMPLEMENTED] in {elapsed:.2f}s (all {n_run} checks skipped)")
+        return "SKIPPED"
+    elif result.wasSuccessful():
+        if n_skipped > 0:
+            print(f"--> GATE {phase_num} [PASSED] in {elapsed:.2f}s ({n_passed} checks passed, {n_skipped} skipped)")
+        else:
+            print(f"--> GATE {phase_num} [PASSED] in {elapsed:.2f}s ({n_passed} checks passed)")
         return True
     else:
-        print(f"--> GATE {phase_num} [BLOCKED] in {elapsed:.2f}s ({len(result.failures)} failures, {len(result.errors)} errors)")
+        skip_msg = f", {n_skipped} skipped" if n_skipped > 0 else ""
+        print(f"--> GATE {phase_num} [BLOCKED] in {elapsed:.2f}s ({n_failures} failures, {n_errors} errors{skip_msg})")
         return False
 
 
@@ -92,9 +105,9 @@ def main():
 
     results = {}
     for p in target_phases:
-        success = run_phase_test(p)
-        results[p] = success
-        if not success:
+        outcome = run_phase_test(p)
+        results[p] = outcome
+        if outcome is not True:
             print(f"\n[HALT] Phase {p} did not pass. Halting further gate checks.")
             break
 
@@ -104,11 +117,18 @@ def main():
     print("=" * 70)
     all_passed = True
     for p in target_phases:
-        status = "[PASSED]" if results.get(p, False) else "[FAILED/BLOCKED]"
+        outcome = results.get(p, None)
+        if outcome is True:
+            status = "[PASSED]"
+        elif outcome == "SKIPPED":
+            status = "[SKIPPED / UNIMPLEMENTED]"
+        else:
+            status = "[FAILED/BLOCKED]"
         name, _ = PHASE_MAP[p]
         print(f"Phase {p:02d} | {name:<48} | {status}")
-        if not results.get(p, False):
+        if outcome is not True:
             all_passed = False
+
 
     print("=" * 70)
     if all_passed:

@@ -48,9 +48,12 @@ def make_csv(path, n=6000, seed=0):
 
 
 def main():
-    os.makedirs("data/raw", exist_ok=True); os.makedirs("outputs/models", exist_ok=True)
+    import tempfile, shutil
+    tmp_dir = tempfile.mkdtemp()
     cfg = Config()
-    cfg.RAW_DATA_PATH = "data/raw/_synthetic.csv"
+    cfg.RAW_DATA_PATH = os.path.join(tmp_dir, "_synthetic.csv")
+    cfg.CKPT_DIR = os.path.join(tmp_dir, "models")
+    os.makedirs(cfg.CKPT_DIR, exist_ok=True)
     cfg.MAX_SAMPLES = None
     make_csv(cfg.RAW_DATA_PATH)
 
@@ -63,7 +66,7 @@ def main():
     print("graph OK")
 
     # --- dataset: chronology, leakage, shapes, gap integrity ----------------
-    tr, va, te, sc, info = build_datasets(cfg)
+    tr, va, te, sc, info = build_datasets(cfg, save_scaler=False)
 
     # Assert shapes: sequences [N, 10, 5], node_targets [N, 4]
     for split_name, ds in [("train", tr), ("val", va), ("test", te)]:
@@ -144,7 +147,8 @@ def main():
     assert abs(sum(r["feature_importance"]) - 1) < 1e-6 and abs(sum(r["time_importance"]) - 1) < 1e-6
     print(f"IG completeness gap = {r['completeness_gap']:.5f} (pred-baseline = {r['predicted_risk']-r['baseline_risk']:.4f})")
     print(narrate(r))
-    os.remove(cfg.RAW_DATA_PATH); print("ALL CHECKS PASSED")
+    shutil.rmtree(tmp_dir, ignore_errors=True)
+    print("ALL CHECKS PASSED")
 
 
 if __name__ == "__main__":

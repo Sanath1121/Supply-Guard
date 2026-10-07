@@ -31,7 +31,7 @@ Phase 3 finalized and verified all production neural network architectures for S
 - **Module Exports (`src/models/__init__.py`):** Exported `STGCNLSTM`, `PaperHybridOverall`, `LSTMBaseline`, `build_model`, and `GraphConv` for clean package-level accessibility.
 
 ### 2.2 Parameter Counting Pipeline (`scripts/count_parameters.py`, `outputs/results/param_counts.csv`)
-- Developed `scripts/count_parameters.py` to systematically instantiate all four model configurations with default Phase 3 dimensions (`seq_len=10`, `node_feat_dim=2`, `hidden_dim=32`, `num_layers=2`):
+- Developed `scripts/count_parameters.py` to systematically instantiate all four model configurations with default Phase 3 dimensions (`seq_len=10`, `node_feat_dim=2`, `GCN_HIDDEN_DIM=32, LSTM_HIDDEN_DIM=32`, `num_layers=2`):
   1. `lstm` (LSTMBaseline)
   2. `paper_overall` (PaperHybridOverall)
   3. `st_gcn_lstm` (mode="directed", residual=True)
@@ -113,3 +113,4 @@ All verification criteria across unit, adversarial, regression, and independent 
 - **Gate 3 Status:** **PASSED & APPROVED (Unanimous Consensus)**
 - **Architectural Readiness:** The core graph convolution layers, temporal LSTM modules, and baseline architectures are fully implemented, numerically verified, and tested against production interfaces.
 - **Approved Next Step:** **Phase 4 — Training Pipeline & Colab Checkpoints** (`training/train.py`, learning rate scheduling, loss functions, early stopping, and checkpoint resumption).
+

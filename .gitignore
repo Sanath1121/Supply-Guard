@@ -1,14 +1,31 @@
-# Data
+# Data (raw dataset files and generic CSVs)
 data/
 *.csv
 
-# Outputs and Checkpoints
-outputs/models/
-outputs/figures/
-outputs/results/
+# Outputs: ignore temporary, figures, and scratch files by default
+outputs/figures/*
+outputs/models/*
+outputs/results/*
 mlruns/
+scratch/
 
-# Python / Environment
+# Whitelist (Un-ignore): Track essential trained models, scaler, hashes, and loss results
+!outputs/**/.gitkeep
+!outputs/models/*.pt
+!outputs/models/scaler.joblib
+!outputs/models/checkpoints.sha256
+!outputs/models/checkpoints.sha256.bak
+!outputs/results/.training_completed
+!outputs/results/param_counts.csv
+!outputs/results/training_summary.csv
+!outputs/results/*_loss.csv
+!outputs/results/overall_metrics.csv
+!outputs/results/node_metrics.csv
+!outputs/results/severity_metrics.csv
+!outputs/results/confusion_matrix.csv
+!outputs/figures/*.png
+
+# Python / Virtual Environments / Caches
 .venv/
 venv/
 __pycache__/
@@ -16,7 +33,7 @@ __pycache__/
 *$py.class
 *.ipynb_checkpoints/
 
-# IDE / OS
+# IDE & Operating System files
 .vscode/
 .idea/
 .agents/

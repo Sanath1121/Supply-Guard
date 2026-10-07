@@ -21,9 +21,9 @@ class Config:
 
     # ---- Forecasting -------------------------------------------------------
     SEQ_LEN = 10             # window [t-L+1 .. t]
-    HORIZON_MIN = 10         # prediction horizon in minutes
-    CADENCE_MIN = 2.0        # sampling cadence in minutes
-    HORIZON = 5              # predict step t+HORIZON (HORIZON_MIN / CADENCE_MIN = 10 / 2 = 5)
+    HORIZON_MIN = 10         # nominal prediction horizon in minutes
+    CADENCE_MIN = 2.0        # nominal sampling cadence in minutes
+    HORIZON = 5              # predict step t+HORIZON (5 steps: nominal 10 min, median 10.0 min, mean 10.8 min)
     GAP_MAX_MIN = 6.0        # max allowable time gap in minutes before segment split (3x cadence)
     FFILL_LIMIT = 5          # max consecutive null rows to forward fill
     TIMESTAMP_FORMAT = "%m/%d/%Y %I:%M:%S %p"

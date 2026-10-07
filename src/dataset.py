@@ -50,39 +50,37 @@ def load_clean_frame(cfg) -> pd.DataFrame:
     df = df.dropna(subset=[cfg.DATE_COL])
 
     df = (df.sort_values(cfg.DATE_COL, kind="stable")
-            .drop_duplicates(subset=[cfg.DATE_COL], keep="first")
-            .reset_index(drop=True))
-    n_dup_dropped = (n_raw - n_bad_ts) - len(df)
-
-    gap_max_min = getattr(cfg, "GAP_MAX_MIN", 6.0)
-    time_diffs = df[cfg.DATE_COL].diff()
-    is_gap = time_diffs > pd.Timedelta(minutes=gap_max_min)
-    df["gap_seg"] = is_gap.cumsum()
+            .drop_duplicates(subset=[cfg.DATE_COL], keep="first"))
+            
+    df = df.set_index(cfg.DATE_COL).resample("2min").asfreq()
+    
+    n_dup_dropped = (n_raw - n_bad_ts) - len(df[~df[cfg.FEATURE_COLS].isna().all(axis=1)])
 
     ffill_limit = getattr(cfg, "FFILL_LIMIT", 5)
-    df[cfg.FEATURE_COLS] = df.groupby("gap_seg")[cfg.FEATURE_COLS].ffill(limit=ffill_limit)
+    df[cfg.FEATURE_COLS] = df[cfg.FEATURE_COLS].ffill(limit=ffill_limit)
 
     has_nan = df[cfg.FEATURE_COLS].isna().any(axis=1)
     n_nan_dropped = int(has_nan.sum())
     clean_df = df[~has_nan].copy()
 
     min_seg_len = getattr(cfg, "SEQ_LEN", 10) + getattr(cfg, "HORIZON", 5)
+    gap_max_min = getattr(cfg, "GAP_MAX_MIN", 6.0)
+
     if len(clean_df) > 0:
-        clean_indices = clean_df.index.to_series()
-        time_diffs_clean = clean_df[cfg.DATE_COL].diff()
-        is_new_seg = (clean_indices.diff() != 1) | (time_diffs_clean > pd.Timedelta(minutes=gap_max_min))
+        time_diffs_clean = clean_df.index.to_series().diff()
+        is_new_seg = time_diffs_clean > pd.Timedelta(minutes=gap_max_min)
         is_new_seg.iloc[0] = False
         clean_df["seg_id"] = is_new_seg.cumsum()
 
         seg_counts = clean_df.groupby("seg_id")["seg_id"].transform("count")
         short_mask = seg_counts < min_seg_len
         n_short_seg_rows = int(short_mask.sum())
-        valid_df = clean_df[~short_mask].copy().reset_index(drop=True)
+        valid_df = clean_df[~short_mask].copy().reset_index()
         if len(valid_df) > 0:
             valid_df["seg_id"] = pd.factorize(valid_df["seg_id"])[0]
     else:
         n_short_seg_rows = 0
-        valid_df = clean_df.copy().reset_index(drop=True)
+        valid_df = clean_df.copy().reset_index()
 
     n_clean_retained = len(valid_df)
     row_loss_stats = {
@@ -107,89 +105,6 @@ def load_clean_frame(cfg) -> pd.DataFrame:
     )
     return valid_df
 
-
-def subsample(df: pd.DataFrame, cfg) -> pd.DataFrame:
-    max_samples = getattr(cfg, "MAX_SAMPLES", None)
-    if max_samples is None or len(df) <= max_samples:
-        return df
-    sampling = getattr(cfg, "SAMPLING", "stride")
-    if sampling == "head":
-        return df.iloc[:max_samples].reset_index(drop=True)
-    stride = int(np.ceil(len(df) / max_samples))
-    return df.iloc[::stride].reset_index(drop=True)
-
-
-def _windows(ext: np.ndarray, ts: np.ndarray, n_ctx: int, L: int, H: int):
-    """ext = [context rows ; partition rows]. Only windows whose TARGET is in the partition."""
-    n_win = len(ext) - L - H + 1
-    X = sliding_window_view(ext, (L, ext.shape[1]))[:n_win, 0]       # [n_win, L, F]
-    tgt_idx = np.arange(n_win) + L + H - 1
-    keep = tgt_idx >= n_ctx
-    return (np.ascontiguousarray(X[keep]),
-            ext[tgt_idx[keep], :4],
-            ts[tgt_idx[keep]])
-
-
-def segment_and_window(
-    df_raw: pd.DataFrame,
-    seq_len: int = 10,
-    horizon: int = 5,
-    gap_max_min: float = 6.0,
-    ffill_limit: int = 5,
-):
-    """Reference implementation of Phase 2 segment-aware windowing logic."""
-    df = df_raw.copy()
-    df["dt"] = pd.to_datetime(df["Timestamp"], format="%m/%d/%Y %I:%M:%S %p", errors="coerce")
-    df = (df.dropna(subset=["dt"])
-            .sort_values("dt", kind="stable")
-            .drop_duplicates(subset=["dt"], keep="first")
-            .reset_index(drop=True))
-
-    time_diffs = df["dt"].diff()
-    is_gap = time_diffs > pd.Timedelta(minutes=gap_max_min)
-    df["gap_seg"] = is_gap.cumsum()
-
-    feature_cols = ["RI_Supplier1", "RI_Manufacturer1", "RI_Distributor1", "RI_Retailer1", "Total_Cost"]
-    target_cols = ["RI_Supplier1", "RI_Manufacturer1", "RI_Distributor1", "RI_Retailer1"]
-
-    final_segments = []
-    seg_counter = 0
-
-    for _, seg_df in df.groupby("gap_seg"):
-        sub = seg_df.copy()
-        sub[feature_cols] = sub[feature_cols].ffill(limit=ffill_limit)
-        has_nan = sub[feature_cols].isna().any(axis=1)
-        if has_nan.any():
-            nan_splits = has_nan.cumsum()
-            for _, clean_sub in sub.groupby(nan_splits):
-                clean_sub = clean_sub.dropna(subset=feature_cols)
-                if len(clean_sub) >= (seq_len + horizon):
-                    clean_sub = clean_sub.copy()
-                    clean_sub["clean_seg_id"] = seg_counter
-                    seg_counter += 1
-                    final_segments.append(clean_sub)
-        else:
-            if len(sub) >= (seq_len + horizon):
-                sub["clean_seg_id"] = seg_counter
-                seg_counter += 1
-                final_segments.append(sub)
-
-    if not final_segments:
-        return np.empty((0, seq_len, 5), dtype=np.float32), np.empty((0, 4), dtype=np.float32), []
-
-    windows = []
-    targets = []
-    for seg in final_segments:
-        feats = seg[feature_cols].values
-        targs = seg[target_cols].values
-        n = len(seg)
-        for i in range(n - seq_len - horizon + 1):
-            w = feats[i: i + seq_len]
-            t = targs[i + seq_len + horizon - 1]
-            windows.append(w)
-            targets.append(t)
-
-    return np.array(windows), np.array(targets), final_segments
 
 
 def build_datasets(cfg, save_scaler: bool = True):

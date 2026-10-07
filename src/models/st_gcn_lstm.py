@@ -46,10 +46,9 @@ class STGCNLSTM(nn.Module):
             cfg.GRAPH_MODE = mode
         if residual is not None:
             cfg.RESIDUAL = residual
-            cfg.RESIDUAL_CONNECTION = residual
 
         self.cfg = cfg
-        self.residual = getattr(cfg, "RESIDUAL_CONNECTION", getattr(cfg, "RESIDUAL", True))
+        self.residual = getattr(cfg, "RESIDUAL", True)
         self.graphs = _register_graphs(self)
         d = cfg.GCN_HIDDEN_DIM
         self.gcn1 = GraphConv(cfg.NODE_FEAT_DIM, d, cfg.GRAPH_MODE)
@@ -73,7 +72,7 @@ class STGCNLSTM(nn.Module):
         _, (h_n, _) = self.lstm(h)                                 # shared LSTM over each node's own series
         z = h_n[-1].reshape(B, N, -1)                              # [B, 4, 64]  (distinct per node)
         out = self.head(z).squeeze(-1)                             # [B, 4]
-        return seq[:, -1, :N] + out if self.residual else torch.sigmoid(out)
+        return seq[:, -1, :N] + out if self.residual else out
 
 
 class LSTMBaseline(nn.Module):
@@ -89,11 +88,13 @@ class LSTMBaseline(nn.Module):
 
         if residual is not None:
             cfg.RESIDUAL = residual
-            cfg.RESIDUAL_CONNECTION = residual
 
         self.cfg = cfg
-        self.residual = getattr(cfg, "RESIDUAL_CONNECTION", getattr(cfg, "RESIDUAL", True))
-        self.lstm = nn.LSTM(cfg.NUM_INPUT_FEATURES, cfg.LSTM_HIDDEN_DIM, cfg.LSTM_NUM_LAYERS, batch_first=True,
+        self.residual = getattr(cfg, "RESIDUAL", True)
+        
+        self.proj = nn.Linear(cfg.NUM_INPUT_FEATURES, cfg.GCN_HIDDEN_DIM)
+        
+        self.lstm = nn.LSTM(cfg.GCN_HIDDEN_DIM, cfg.LSTM_HIDDEN_DIM, cfg.LSTM_NUM_LAYERS, batch_first=True,
                             dropout=cfg.LSTM_DROPOUT if cfg.LSTM_NUM_LAYERS > 1 else 0.0)
         self.head = nn.Sequential(nn.Linear(cfg.LSTM_HIDDEN_DIM, cfg.HEAD_HIDDEN), nn.ReLU(),
                                   nn.Dropout(cfg.FC_DROPOUT), nn.Linear(cfg.HEAD_HIDDEN, cfg.NUM_NODES))
@@ -101,9 +102,10 @@ class LSTMBaseline(nn.Module):
             nn.init.zeros_(self.head[-1].weight); nn.init.zeros_(self.head[-1].bias)
 
     def forward(self, seq: torch.Tensor) -> torch.Tensor:
-        _, (h_n, _) = self.lstm(seq)
+        x = torch.relu(self.proj(seq))
+        _, (h_n, _) = self.lstm(x)
         out = self.head(h_n[-1])
-        return seq[:, -1, :self.cfg.NUM_NODES] + out if self.residual else torch.sigmoid(out)
+        return seq[:, -1, :self.cfg.NUM_NODES] + out if self.residual else out
 
 
 class PaperHybridOverall(nn.Module):
@@ -142,4 +144,11 @@ def build_model(name: str, cfg=None) -> nn.Module:
     if cfg is None:
         from src.config import Config
         cfg = Config()
+    
+    if name.startswith("st_gcn_lstm_"):
+        mode = name.split("_")[-1]
+        cfg = copy.copy(cfg)
+        cfg.GRAPH_MODE = "symmetric" if mode == "sym" else "directed"
+        return STGCNLSTM(cfg)
+        
     return MODELS[name](cfg)

@@ -1,7 +1,5 @@
 # SupplyGuard: Real-Time Multi-Echelon Supply Chain Risk Alert System
 
-[![SupplyGuard CI](https://github.com/Sanath1121/Supply-Guard/actions/workflows/ci.yml/badge.svg)](https://github.com/Sanath1121/Supply-Guard/actions/workflows/ci.yml)
-
 An empirical re-implementation and spatio-temporal node-level extension of the IEEE ICCMC 2025 hybrid GNN-LSTM model for supply chain risk forecasting with validated gradient attributions.
 
 ## Project Aim
@@ -15,6 +13,12 @@ SupplyGuard re-implements the IEEE ICCMC 2025 hybrid GCN+LSTM as a paper-style b
 - **Mirror Repository:** GitHub [`webintellectual/Supply-Chain-Stability-Classifier`](https://github.com/webintellectual/Supply-Chain-Stability-Classifier)
 - **Pinned Commit Hash:** `698ec038f7410a426655d73bff990699ead8808c`
 - **SHA-256 Checksum:** `d2e71ae7f55fa70ef498fecb9b6db0c9fd59688f17f8ad3c27c7576f09e76ff3`
+
+---
+
+## Foundational Literature / Base Paper
+- **Citation:** Farzhana I. & Dev Harris L. (2025), *"Hybrid GNN-LSTM Model for Real-Time Supply Chain Risk Prediction"*, 2025 8th International Conference on Computing Methodologies and Communication (ICCMC), IEEE, [doi:10.1109/ICCMC65190.2025.11140739](https://doi.org/10.1109/ICCMC65190.2025.11140739).
+- **Note on Architecture:** Global mean pooling, vector dimensions (32/64/96), and scalar TRI represent SupplyGuard's architectural interpretations to bridge the paper's hybrid fusion concept to the dataset, not explicit verbatim specifications.
 
 ---
 
