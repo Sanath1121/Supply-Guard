@@ -6,6 +6,7 @@ tamper-evident artifact provenance metadata and scientific disclaimers.
 from typing import Dict, Any, List, Optional
 import hashlib
 import os
+import numpy as np
 import streamlit as st
 
 from src.config import Config
@@ -60,6 +61,8 @@ def generate_markdown_report(
     p33, p66 = tiers["p33"], tiers["p66"]
 
     # Forecast summary
+    if preds is not None:
+        preds = np.atleast_1d(preds)
     tri_val = float(preds[0] if (status.model_name == "paper_overall" or (preds is not None and preds.size == 1)) else (preds.mean() if preds is not None else 0.0))
     tri_tier = compute_tercile_tier(tri_val, p33, p66)
 

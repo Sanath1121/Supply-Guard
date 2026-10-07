@@ -267,8 +267,9 @@ def main(cfg=None, models=None, seeds=None, cli_args=None):
     resolved_models = [MODEL_ALIASES.get(m, m) for m in raw_models]
     resolved_seeds = seeds if seeds is not None else args.seeds
 
+    results_dir = getattr(cfg, "RESULTS_DIR", "outputs/results")
     os.makedirs(cfg.CKPT_DIR, exist_ok=True)
-    os.makedirs("outputs/results", exist_ok=True)
+    os.makedirs(results_dir, exist_ok=True)
 
     print(f"SupplyGuard Training Pipeline | Device: {device} | Models: {resolved_models} | Seeds: {resolved_seeds}")
 
@@ -295,7 +296,7 @@ def main(cfg=None, models=None, seeds=None, cli_args=None):
     except Exception:
         mlflow = None
 
-    summary_path = "outputs/results/training_summary.csv"
+    summary_path = getattr(cfg, "SUMMARY_PATH", os.path.join(results_dir, "training_summary.csv"))
     if os.path.exists(summary_path):
         try:
             summary_df = pd.read_csv(summary_path)
@@ -308,7 +309,7 @@ def main(cfg=None, models=None, seeds=None, cli_args=None):
     for name in resolved_models:
         for seed in resolved_seeds:
             path = ckpt_path(cfg, name, seed)
-            loss_file = f"outputs/results/{name}_seed{seed}_loss.csv"
+            loss_file = os.path.join(results_dir, f"{name}_seed{seed}_loss.csv")
             if os.path.exists(path) and os.path.exists(loss_file) and not args.force:
                 print(f"[{name} seed={seed}] [Skip] Checkpoint and loss history exist: {path}")
                 continue
@@ -335,7 +336,7 @@ def main(cfg=None, models=None, seeds=None, cli_args=None):
                 best, hist, path = train_one(cfg, name, seed, tr, va, device=device, force_overwrite=args.force)
 
             elapsed = time.time() - t0
-            loss_file = f"outputs/results/{name}_seed{seed}_loss.csv"
+            loss_file = os.path.join(results_dir, f"{name}_seed{seed}_loss.csv")
             hist.to_csv(loss_file, index=False)
             print(f"  best val loss {best:.6f}  ({elapsed:.0f}s, {len(hist)} epochs)")
 
@@ -349,7 +350,7 @@ def main(cfg=None, models=None, seeds=None, cli_args=None):
             })
             pd.DataFrame(rows).to_csv(summary_path, index=False)
 
-    completion_marker = os.path.join("outputs", "results", ".training_completed")
+    completion_marker = os.path.join(results_dir, ".training_completed")
     all_complete = all(os.path.exists(ckpt_path(cfg, m, s)) for m in MODEL_NAMES for s in [42, 43, 44, 45, 46])
     if all_complete:
         with open(completion_marker, "w", encoding="utf-8") as f:

@@ -124,7 +124,7 @@ def render_monitor(
 
     # 2. Run Forward Inference
     t0 = time.perf_counter()
-    preds = predict_window(model, seq)
+    preds = np.atleast_1d(predict_window(model, seq))
     inference_ms = (time.perf_counter() - t0) * 1000.0
 
     tiers = get_tiers()
@@ -263,7 +263,8 @@ def render_monitor(
 
             node_risks_dict = {Config.NODE_NAMES[i]: float(preds[i]) for i in range(4)}
             svg_html = render_topology_svg(node_risks_dict, tiers, edge_shares, xai_error=xai_err)
-            st.html(svg_html)
+            import streamlit.components.v1 as components
+            components.html(svg_html, height=280)
 
     with tab_traj:
         fig = go.Figure()

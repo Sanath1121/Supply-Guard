@@ -57,6 +57,8 @@ class TestAdversarialPhase4Challenger2(unittest.TestCase):
         self.cfg = Config()
         self.cfg.CKPT_DIR = os.path.join(self.temp_dir, "models")
         self.results_dir = os.path.join(self.temp_dir, "results")
+        self.cfg.RESULTS_DIR = self.results_dir
+        self.cfg.SUMMARY_PATH = os.path.join(self.results_dir, "training_summary.csv")
         os.makedirs(self.cfg.CKPT_DIR, exist_ok=True)
         os.makedirs(self.results_dir, exist_ok=True)
 
@@ -95,10 +97,18 @@ class TestAdversarialPhase4Challenger2(unittest.TestCase):
         with open(ckpt_file, "wb") as f:
             f.write(sentinel_payload)
 
+        loss_file = os.path.join(self.results_dir, f"{target_model}_seed{target_seed}_loss.csv")
+        with open(loss_file, "w") as fl:
+            fl.write("epoch,train_loss,val_loss\n1,0.1,0.1")
+
         # Wait briefly to ensure mtime separation
         time.sleep(0.05)
         mtime_before = os.path.getmtime(ckpt_file)
         size_before = os.path.getsize(ckpt_file)
+        
+        # Create dummy loss file to bypass training
+        loss_file = os.path.join(self.results_dir, f"{target_model}_seed{target_seed}_loss.csv")
+        pd.DataFrame().to_csv(loss_file)
 
         # Mock build_datasets to avoid requiring raw data parquet on disk
         def mock_build_datasets(cfg, save_scaler=False):
@@ -122,7 +132,7 @@ class TestAdversarialPhase4Challenger2(unittest.TestCase):
         output = stdout_capture.getvalue()
         # Invariant 1: [Skip] must be logged explicitly
         self.assertIn(
-            f"[{target_model} seed={target_seed}] [Skip] Checkpoint exists:",
+            f"[{target_model} seed={target_seed}] [Skip] Checkpoint and loss history exist:",
             output,
             "Pipeline must log [Skip] message for pre-existing checkpoint",
         )
@@ -143,10 +153,17 @@ class TestAdversarialPhase4Challenger2(unittest.TestCase):
         # Pre-create checkpoint for lstm only
         lstm_ckpt = ckpt_path(self.cfg, "lstm", seed)
         torch.save({"dummy": 1}, lstm_ckpt)
+        loss_file = os.path.join(self.results_dir, f"lstm_seed{seed}_loss.csv")
+        with open(loss_file, "w") as fl:
+            fl.write("epoch,train_loss,val_loss\n1,0.1,0.1")
         lstm_mtime = os.path.getmtime(lstm_ckpt)
 
         paper_ckpt = ckpt_path(self.cfg, "paper_overall", seed)
         self.assertFalse(os.path.exists(paper_ckpt), "Paper checkpoint should not exist initially")
+
+        # We MUST ALSO pre-create the loss CSV so it is skipped
+        lstm_loss = os.path.join(self.results_dir, f"lstm_seed{seed}_loss.csv")
+        pd.DataFrame().to_csv(lstm_loss, index=False)
 
         def mock_build_datasets(cfg, save_scaler=False):
             return self.tr_ds, self.va_ds, self.va_ds, None, {
@@ -154,11 +171,18 @@ class TestAdversarialPhase4Challenger2(unittest.TestCase):
                 "start": "2024-01-01",
                 "end": "2024-01-02",
             }
+            
+        def mock_to_csv(df, path, *args, **kwargs):
+            if "training_summary.csv" in path:
+                path = os.path.join(self.temp_dir, "training_summary.csv")
+            df.to_csv_orig(path, *args, **kwargs)
 
         stdout_capture = io.StringIO()
+        pd.DataFrame.to_csv_orig = pd.DataFrame.to_csv
         with patch("sys.stdout", stdout_capture), \
              patch("src.dataset.build_datasets", side_effect=mock_build_datasets), \
-             patch("training.train.build_datasets", side_effect=mock_build_datasets):
+             patch("training.train.build_datasets", side_effect=mock_build_datasets), \
+             patch("training.train.pd.DataFrame.to_csv", side_effect=mock_to_csv, autospec=True):
             main(
                 cfg=self.cfg,
                 models=["lstm", "paper_overall"],
@@ -168,7 +192,7 @@ class TestAdversarialPhase4Challenger2(unittest.TestCase):
 
         output = stdout_capture.getvalue()
         # lstm skipped
-        self.assertIn(f"[lstm seed={seed}] [Skip] Checkpoint exists:", output)
+        self.assertIn(f"[lstm seed={seed}] [Skip] Checkpoint and loss history exist:", output)
         self.assertEqual(os.path.getmtime(lstm_ckpt), lstm_mtime, "lstm checkpoint was overwritten")
 
         # paper_overall trained and checkpoint created
@@ -418,49 +442,40 @@ class TestAdversarialPhase4Challenger2(unittest.TestCase):
 
     def test_11_training_summary_progressive_deduplication(self):
         """Verify training_summary.csv is deduplicated when the same model/seed is rerun."""
-        summary_path = os.path.join("outputs", "results", "training_summary.csv")
-        original_summary = None
-        if os.path.exists(summary_path):
-            original_summary = pd.read_csv(summary_path)
+        summary_path = self.cfg.SUMMARY_PATH
+        os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+        initial_df = pd.DataFrame([
+            {"model": "lstm", "seed": 42, "best_val_loss": 0.50, "wall_clock_s": 10.0},
+            {"model": "paper_overall", "seed": 42, "best_val_loss": 0.30, "wall_clock_s": 12.0},
+        ])
+        initial_df.to_csv(summary_path, index=False)
 
-        try:
-            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
-            initial_df = pd.DataFrame([
-                {"model": "lstm", "seed": 42, "best_val_loss": 0.50, "wall_clock_s": 10.0},
-                {"model": "paper_overall", "seed": 42, "best_val_loss": 0.30, "wall_clock_s": 12.0},
-            ])
-            initial_df.to_csv(summary_path, index=False)
+        def mock_build_datasets(cfg, save_scaler=False):
+            return self.tr_ds, self.va_ds, self.va_ds, None, {
+                "n_rows_used": 80, "start": "2024-01-01", "end": "2024-01-02"
+            }
 
-            def mock_build_datasets(cfg, save_scaler=False):
-                return self.tr_ds, self.va_ds, self.va_ds, None, {
-                    "n_rows_used": 80, "start": "2024-01-01", "end": "2024-01-02"
-                }
+        with patch("src.dataset.build_datasets", side_effect=mock_build_datasets), \
+             patch("training.train.build_datasets", side_effect=mock_build_datasets), \
+             patch("sys.stdout", io.StringIO()):
+            ckpt = ckpt_path(self.cfg, "lstm", 42)
+            if os.path.exists(ckpt):
+                os.remove(ckpt)
 
-            with patch("src.dataset.build_datasets", side_effect=mock_build_datasets), \
-                 patch("training.train.build_datasets", side_effect=mock_build_datasets), \
-                 patch("sys.stdout", io.StringIO()):
-                ckpt = ckpt_path(self.cfg, "lstm", 42)
-                if os.path.exists(ckpt):
-                    os.remove(ckpt)
+            main(
+                cfg=self.cfg,
+                models=["lstm"],
+                seeds=[42],
+                cli_args=["--force-cpu", "--epochs", "1", "--batch-size", "16"],
+            )
 
-                main(
-                    cfg=self.cfg,
-                    models=["lstm"],
-                    seeds=[42],
-                    cli_args=["--force-cpu", "--epochs", "1", "--batch-size", "16"],
-                )
-
-            updated_df = pd.read_csv(summary_path)
-            # Must still have exactly 2 rows (lstm row was updated, not appended as duplicate!)
-            lstm_rows = updated_df[(updated_df["model"] == "lstm") & (updated_df["seed"] == 42)]
-            self.assertEqual(len(lstm_rows), 1, "Duplicate lstm seed 42 row found in training_summary.csv!")
-            self.assertEqual(len(updated_df), 2, "Summary dataframe row count must remain 2 after deduplication")
-        finally:
-            if original_summary is not None:
-                original_summary.to_csv(summary_path, index=False)
-            elif os.path.exists(summary_path):
-                pass
+        updated_df = pd.read_csv(summary_path)
+        # Must still have exactly 2 rows (lstm row was updated, not appended as duplicate!)
+        lstm_rows = updated_df[(updated_df["model"] == "lstm") & (updated_df["seed"] == 42)]
+        self.assertEqual(len(lstm_rows), 1, "Duplicate lstm seed 42 row found in training_summary.csv!")
+        self.assertEqual(len(updated_df), 2, "Summary dataframe row count must remain 2 after deduplication")
 
 
 if __name__ == "__main__":
     unittest.main()
+

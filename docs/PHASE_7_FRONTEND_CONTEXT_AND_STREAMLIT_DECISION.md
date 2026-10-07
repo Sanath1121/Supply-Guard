@@ -331,13 +331,17 @@ explanation = explainer.explain(seq_tensor[0], target_node=target_idx, residual_
 # {
 #     "target_node": int,
 #     "predicted_risk": float,
-#     "baseline_risk": float,
+#     "baseline_risk": float,                                   # Alias: base_risk
 #     "completeness_gap": float,
+#     "attribution": np.ndarray,                                # Alias: contributions [L, F]
 #     "feature_importance": [float, float, float, float, float], # Sums to 1.0
+#     "feature_signed": [float, float, float, float, float],    # Net push up (+) / down (-)
 #     "time_importance": [float] * 10,                          # Sums to 1.0
-#     "upstream_share": float,                                  # Attribution from upstream nodes
-#     "narrative": str                                          # Natural language explanation
+#     "total_abs_attribution": float                            # Magnitude of attribution
 # }
+# Note: upstream_share and narrative are NOT in the dict. They are separate helper functions:
+# share = upstream_share(explanation)
+# text = narrate(explanation)
 ```
 
 ---

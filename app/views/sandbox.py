@@ -11,8 +11,10 @@ import streamlit as st
 
 from src.config import Config
 from app.ui.components import card, banner, section_header, status_badge, escape
+from app.ui.canvas import render_topology_svg
 from app.utils.artifacts import ArtifactStatus, get_tiers, get_scaler, predict_window
 from app.utils.formatters import compute_tercile_tier
+from app.utils.explain_service import compute_all_edge_shares
 
 
 def render_sandbox(
@@ -44,30 +46,45 @@ def render_sandbox(
             [
                 "Scenario A: Upstream Tier-1 Supplier Shortage",
                 "Scenario B: Midstream Manufacturing Assembly Halt",
-                "Scenario C: Downstream Retail Demand Surge"
+                "Scenario C: Downstream Retail Demand Surge",
+                "Scenario D: Global Logistics Cost Shock"
             ]
         )
 
-        # Build synthetic 10-step sequence based on scenario
+        # Build synthetic 10-step sequence based on scenario with stochastic noise
         seq = np.zeros((Config.SEQ_LEN, Config.NUM_INPUT_FEATURES), dtype=np.float32)
         base_line = np.linspace(0.2, 0.35, Config.SEQ_LEN)
+        
         for i in range(4):
-            seq[:, i] = base_line
+            # Inject Gaussian noise into the base sequences
+            noise = np.random.normal(0.0, 0.03, Config.SEQ_LEN)
+            seq[:, i] = np.clip(base_line + noise, 0.0, 1.0)
 
         if "Supplier" in preset_name:
-            seq[-3:, 0] = [0.65, 0.82, 0.95] # Supplier spike
-            seq[:, 4] = np.linspace(0.3, 0.7, Config.SEQ_LEN) # Cost rise
+            spike = np.array([0.65, 0.82, 0.95]) + np.random.normal(0, 0.02, 3)
+            seq[-3:, 0] = np.clip(spike, 0.0, 1.0) # Supplier spike
+            seq[:, 4] = np.clip(np.linspace(0.3, 0.7, Config.SEQ_LEN) + np.random.normal(0, 0.03, Config.SEQ_LEN), 0.0, 1.0) # Cost rise
         elif "Manufacturing" in preset_name:
-            seq[-3:, 1] = [0.60, 0.78, 0.90] # Manufacturer spike
-            seq[:, 4] = np.linspace(0.2, 0.5, Config.SEQ_LEN)
-        else:
-            seq[-3:, 3] = [0.70, 0.85, 0.92] # Retailer spike
-            seq[:, 4] = np.linspace(0.4, 0.8, Config.SEQ_LEN)
+            spike = np.array([0.60, 0.78, 0.90]) + np.random.normal(0, 0.02, 3)
+            seq[-3:, 1] = np.clip(spike, 0.0, 1.0) # Manufacturer spike
+            seq[:, 4] = np.clip(np.linspace(0.2, 0.5, Config.SEQ_LEN) + np.random.normal(0, 0.03, Config.SEQ_LEN), 0.0, 1.0)
+        elif "Retail" in preset_name:
+            spike = np.array([0.70, 0.85, 0.92]) + np.random.normal(0, 0.02, 3)
+            seq[-3:, 3] = np.clip(spike, 0.0, 1.0) # Retailer spike
+            seq[:, 4] = np.clip(np.linspace(0.4, 0.8, Config.SEQ_LEN) + np.random.normal(0, 0.03, Config.SEQ_LEN), 0.0, 1.0)
+        else: # Global Logistics Cost Shock
+            for i in range(4):
+                spike = np.array([0.45, 0.55, 0.65]) + np.random.normal(0, 0.02, 3)
+                seq[-3:, i] = np.clip(spike, 0.0, 1.0) # Universal moderate risk escalation
+            cost_spike = np.array([0.60, 0.80, 0.95, 1.0]) + np.random.normal(0, 0.01, 4)
+            seq[-4:, 4] = np.clip(cost_spike, 0.0, 1.0) # Massive cost spike in recent steps
+            # Backfill earlier cost to avoid zeros
+            seq[:-4, 4] = np.clip(np.linspace(0.2, 0.4, Config.SEQ_LEN-4) + np.random.normal(0, 0.02, Config.SEQ_LEN-4), 0.0, 1.0)
 
         st.caption(f"Simulating lookback sequence under: **{escape(preset_name)}**")
 
         if st.button("Run Sandbox Simulation", key="run_sim_btn"):
-            preds = predict_window(model, seq)
+            preds = np.atleast_1d(predict_window(model, seq))
             st.markdown("#### Forecasted Scenario Impacts")
             
             if status.model_name == "paper_overall" or preds.size == 1:
@@ -106,5 +123,48 @@ def render_sandbox(
                     else:
                         st.dataframe(df.head(5), use_container_width=True)
                         st.info("Custom CSV successfully verified for sandbox evaluation.")
+                        
+                        # NEW: Run inference on custom uploaded CSV
+                        if st.button("Run Inference on Custom CSV", key="run_upload_sim_btn"):
+                            tail_df = df.tail(Config.SEQ_LEN)
+                            seq_data = tail_df[req_cols].values.astype(np.float32)
+                            
+                            preds = np.atleast_1d(predict_window(model, seq_data))
+                            st.markdown("#### Forecasted Custom Scenario Impacts")
+                            
+                            if status.model_name == "paper_overall" or preds.size == 1:
+                                tri_val = float(preds[0])
+                                t_tier = compute_tercile_tier(tri_val, p33, p66)
+                                st.html(card("Simulated Total Risk Index", f"<div style='font-size: 1.5rem;' class='mono-val'>{tri_val:.3f} ({t_tier})</div>"))
+                            else:
+                                cols = st.columns(4)
+                                for i, n in enumerate(Config.NODE_NAMES):
+                                    with cols[i]:
+                                        r = float(preds[i])
+                                        t = compute_tercile_tier(r, p33, p66)
+                                        st.html(card(n, f"<div style='font-size: 1.25rem;' class='mono-val'>{r:.3f}</div><div style='margin-top:4px;'>{status_badge(t, t)}</div>", tone=t))
+
+                            # Spatiotemporal Risk Cascade Network Topology
+                            st.markdown("---")
+                            st.markdown("#### Spatiotemporal Risk Cascade")
+                            
+                            try:
+                                model_key = f"{status.model_name}:{status.graph_mode}:{status.seed}"
+                                # Calculate the XAI upstream flow between all nodes
+                                with st.spinner("Calculating cascading network topology..."):
+                                    edge_shares, xai_err = compute_all_edge_shares(model_key, seq_data)
+
+                                # Map the AI predictions to their node names
+                                if status.model_name == "paper_overall" or preds.size == 1:
+                                    node_risks_dict = {Config.NODE_NAMES[i]: float(preds[0]) for i in range(4)}
+                                else:
+                                    node_risks_dict = {Config.NODE_NAMES[i]: float(preds[i]) for i in range(4)}
+
+                                # Generate and render the animated SVG
+                                svg_html = render_topology_svg(node_risks_dict, tiers, edge_shares, xai_error=xai_err)
+                                import streamlit.components.v1 as components
+                                components.html(svg_html, height=280)
+                            except Exception as ex:
+                                st.error(f"Topology visualization unavailable: {escape(str(ex))}")
                 except Exception as e:
                     st.error(f"Failed to parse CSV: {escape(str(e))}")

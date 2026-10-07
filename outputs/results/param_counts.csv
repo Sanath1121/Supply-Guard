@@ -1,5 +1,5 @@
 model,total_params,trainable_params
-lstm,53668,53668
+lstm,60772,60772
 paper_overall,57793,57793
 st_gcn_lstm (directed),63937,63937
 st_gcn_lstm (symmetric),61761,61761

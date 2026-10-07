@@ -53,8 +53,8 @@ class TestAdversarialPhase5(unittest.TestCase):
         cm_df = pd.read_csv(cm_path, index_col=0)
         total_eval_samples = cm_df.values.sum()
 
-        # In test set, there are 57,875 windows. For 4 nodes, total classifications = 57,875 * 4 = 231,500
-        self.assertEqual(total_eval_samples, 57875 * 4)
+        # In test set, there are 1,194 windows. For 4 nodes, total classifications = 1,194 * 4 = 4,776
+        self.assertEqual(total_eval_samples, 1194 * 4)
 
     def test_03_claims_table_decision_boundaries(self):
         """Stress-test Claims Table (§4) logic across synthetic counterfactual scenarios."""
