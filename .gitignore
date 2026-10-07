@@ -11,7 +11,6 @@ scratch/
 
 # Whitelist (Un-ignore): Track essential trained models, scaler, hashes, and loss results
 !outputs/**/.gitkeep
-!outputs/models/*.pt
 !outputs/models/scaler.joblib
 !outputs/models/checkpoints.sha256
 !outputs/models/checkpoints.sha256.bak

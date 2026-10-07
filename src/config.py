@@ -1,4 +1,5 @@
 """All hyperparameters and column mappings in one place."""
+import os
 
 
 class Config:
@@ -51,3 +52,7 @@ class Config:
     PATIENCE = 10
     GRAD_CLIP = 1.0
     SEEDS = [42, 43, 44, 45, 46]   # report mean +/- std over these
+
+    # ---- Feature Flags -----------------------------------------------------
+    ENABLE_SANDBOX = os.environ.get("SG_ENABLE_SANDBOX", "1") != "0"
+

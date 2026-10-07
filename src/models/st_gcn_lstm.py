@@ -25,9 +25,8 @@ def _register_graphs(module: nn.Module):
 
 def _head(in_dim, hidden, dropout, residual):
     last = nn.Linear(hidden, 1)
-    if residual:                               # start exactly at the persistence forecast
-        nn.init.zeros_(last.weight)
-        nn.init.zeros_(last.bias)
+    # Removed custom near-zero initialization to preserve gradient flow
+    # to the deep layers, avoiding weight collapse.
     return nn.Sequential(nn.Linear(in_dim, hidden), nn.ReLU(), nn.Dropout(dropout), last)
 
 
@@ -98,8 +97,8 @@ class LSTMBaseline(nn.Module):
                             dropout=cfg.LSTM_DROPOUT if cfg.LSTM_NUM_LAYERS > 1 else 0.0)
         self.head = nn.Sequential(nn.Linear(cfg.LSTM_HIDDEN_DIM, cfg.HEAD_HIDDEN), nn.ReLU(),
                                   nn.Dropout(cfg.FC_DROPOUT), nn.Linear(cfg.HEAD_HIDDEN, cfg.NUM_NODES))
-        if self.residual:
-            nn.init.zeros_(self.head[-1].weight); nn.init.zeros_(self.head[-1].bias)
+        # Removed custom near-zero initialization to preserve gradient flow
+        # to the deep layers, avoiding weight collapse.
 
     def forward(self, seq: torch.Tensor) -> torch.Tensor:
         x = torch.relu(self.proj(seq))
