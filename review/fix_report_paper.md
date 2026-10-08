@@ -52,3 +52,12 @@ Verification: `verify_checkpoints` 20/20 PASS; manifest verify OK; `run_phase_te
 - The deletion test covers 10 windows chosen for large corrections; 7 of 10 pass.
 - Training was not re-run; results are the Phase 5 run. The Colab environment is documented in `PHASE_4.md`, not re-verified.
 - Layout checked by opening in Word (7 pages, 7 figures, 8 tables); please skim it once in Word before submitting.
+
+## Documentation reconciled after the restore
+
+`PHASE_5.md`, `docs/PHASE_5.md` and `PROJECT_PROGRESS_AND_EVALUATION_REPORT.md` still carried the subset-run numbers
+(e.g. persistence MSE 0.000995, 4,776 test points). `PHASE_5.md` and `docs/PHASE_5.md` were restored from `74ed751`;
+the Phase 5 sections of the progress report (dashboard line, key achievements 1-3, Tables 4.2-4.4) were regenerated
+from `outputs/results/*.csv`. The old "proves node attribution benefit" wording was removed, and the report now notes
+that the graph-free ablation is architecture-confounded. Grep for the old values (`0.000749`, `4,776`, `1,194 windows`)
+now returns no hits outside historical review files and the evidence note.

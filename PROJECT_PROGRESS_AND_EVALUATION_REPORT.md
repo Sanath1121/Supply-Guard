@@ -39,7 +39,7 @@ As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirical
 |  [PHASE 2] Data Pipeline Hardening    | Status: PASSED (Gate 2) | Gap segmentation, zero-leakage split  |
 |  [PHASE 3] Models & Baselines         | Status: PASSED (Gate 3) | GCN/LSTM shapes, 2-hop grads, params  |
 |  [PHASE 4] Training on Colab GPU      | Status: PASSED (Gate 4) | 20 runs complete on A100, weights dl  |
-|  [PHASE 5] Evaluation & Benchmarking  | Status: PASSED (Gate 5) | Test MSE 0.000749, proves node attribution benefit  |
+|  [PHASE 5] Evaluation & Benchmarking  | Status: PASSED (Gate 5) | Test MSE 0.000273 (31% below persistence)  |
 |  [PHASE 6] Explainability Validation  | Status: PASSED (Gate 6) | Delta-IG, 70% deletion test pass rate |
 |  [PHASE 7] Streamlit Dashboard        | Status: SPEC LOCKED     | 4 tabs, replay engine, Plotly topology|
 |  [PHASE 8] Viva Defense & Clean Run   | Status: SCHEDULED       | End-to-end reproduction, documentation|
@@ -47,17 +47,17 @@ As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirical
 ```
 
 ### Key Quantitative Achievements
-1. **Headline Finding & Pre-Registered Claim (Plan A Â§4):**
-   - **Naive Persistence Baseline Test MSE:** `0.000995` ($R^2 = 0.9526$).
-   - **Temporal Baseline (`lstm`) Test MSE:** `0.000719 Â± 0.000057` ($R^2 = 0.9657$).
-   - **Proposed Model (`st_gcn_lstm_dir`) Test MSE:** `0.000749 Â± 0.000031` ($R^2 = 0.9643$).
-   - **Difference (`lstm` âˆ’ `st_gcn_lstm_dir`):** `-0.000030`, ST-GCN does not beat LSTM beyond 1 std.
-   - **Authorized Pre-Registered Claim:**  
-     > **"Temporal modelling helps; the assumed graph adds no measurable accuracy but enables per-node attribution"**
+1. **Headline Finding & Pre-Registered Claim (Plan A §4):**
+   - **Naive Persistence Baseline Test MSE:** `0.000397` ($R^2 = 0.9613$).
+   - **Temporal Baseline (`lstm`) Test MSE:** `0.000284 ± 0.000003` ($R^2 = 0.9723$).
+   - **Proposed Model (`st_gcn_lstm_dir`) Test MSE:** `0.000273 ± 0.000003` ($R^2 = 0.9734$).
+   - **Difference (`lstm` − `st_gcn_lstm_dir`):** `0.000011`, larger than the 1-std threshold (`0.000006`); the ablation is architecture-confounded, so this is not proof that graph structure alone causes the gain.
+   - **Evaluator verdict (pre-registered claim):**  
+     > **"Graph structure improves echelon-level forecasts on this dataset"**
 2. **Upstream Disruption Warning Skill:**
-   - On the critical **Supplier** tier, `st_gcn_lstm_dir` achieves a relative skill score of **21.8%** ($MSE = 1.53 \times 10^{-4}$) vs. **18.6%** for `lstm` ($MSE = 1.59 \times 10^{-4}$), proving that upstream graph message passing helps at the root tier.
+   - On the **Supplier** tier, `st_gcn_lstm_dir` achieves a relative skill score of **23.4%** vs. **3.4%** for `lstm`.
 3. **Directional vs. Symmetric Message Passing:**
-   - Asymmetric directed convolution (`0.000749`) significantly outperforms symmetric graph convolution (`0.000789`), validating that decomposing physical flow ($A_{\text{down}}$) from delay feedback ($A_{\text{up}}$) prevents relational information blurring.
+   - Directed convolution (`0.000273`) outperforms symmetric (`0.000330 ± 0.000061`); two symmetric seeds collapsed to the persistence solution during training.
 4. **Explainability & Deletion Testing:**
    - Completeness Axiom verified over 64 Riemann steps ($\text{mean gap} = 0.0017 \ll 0.05$).
    - $\Delta$-attribution successfully isolates dynamic network adjustments from static autocorrelation.
@@ -185,12 +185,12 @@ Evaluation metrics from `outputs/results/overall_metrics.csv` evaluated on the u
 
 | Model Architecture | Target Space | Test MSE ($\pm$ Std) | Test MAE ($\pm$ Std) | Test $R^2$ ($\pm$ Std) | % MSE Improvement vs. Persistence |
 |---|---|---|---|---|---|
-| **`st_gcn_lstm_dir`** | Derived 4-Node Mean | 0.000749 $\pm$ 0.000031 | 0.008470 $\pm$ 0.000309 | 0.9643 $\pm$ 0.0015 | +24.70% $\pm$ 3.10% |
-| **`lstm`** | Derived 4-Node Mean | **0.000719 $\pm$ 0.000057** | **0.008423 $\pm$ 0.000509** | **0.9657 $\pm$ 0.0027** | **+27.70% $\pm$ 5.73%** |
-| **`paper_overall`** | Direct Scalar TRI | 0.000948 $\pm$ 0.000017 | 0.013007 $\pm$ 0.001134 | 0.9549 $\pm$ 0.0008 | +4.79% $\pm$ 1.75% |
-| **`st_gcn_lstm_sym`** | Derived 4-Node Mean | 0.000789 $\pm$ 0.000083 | 0.008443 $\pm$ 0.000301 | 0.9624 $\pm$ 0.0039 | +20.69% $\pm$ 8.33% |
-| **`ar10_ridge`** ($\alpha=10$) | Derived 4-Node Mean | 0.000904 (deterministic) | 0.008304 | 0.9569 | +9.12% |
-| **`persistence`** | Derived 4-Node Mean | 0.000995 (deterministic) | 0.007864 | 0.9526 | 0.00% (Baseline) |
+| **`st_gcn_lstm_dir`** | Derived 4-Node Mean | 0.000273 $\pm$ 0.000003 | 0.005238 $\pm$ 0.000259 | 0.9734 $\pm$ 0.0003 | +31.16% $\pm$ 0.68% |
+| **`lstm`** | Derived 4-Node Mean | 0.000284 $\pm$ 0.000003 | 0.005118 $\pm$ 0.000093 | 0.9723 $\pm$ 0.0003 | +28.47% $\pm$ 0.82% |
+| **`paper_overall`** | Direct Scalar TRI | 0.000288 $\pm$ 0.000008 | 0.006088 $\pm$ 0.000466 | 0.9719 $\pm$ 0.0008 | +27.44% $\pm$ 2.08% |
+| **`st_gcn_lstm_sym`** | Derived 4-Node Mean | 0.000330 $\pm$ 0.000061 | 0.005385 $\pm$ 0.000147 | 0.9678 $\pm$ 0.0059 | +16.77% $\pm$ 15.34% |
+| **`ar10_ridge`** ($\alpha=10$) | Derived 4-Node Mean | 0.000354 (deterministic) | 0.006351 (deterministic) | 0.9655 (deterministic) | +10.81% |
+| **`persistence`** | Derived 4-Node Mean | 0.000397 (deterministic) | 0.005493 (deterministic) | 0.9613 (deterministic) | 0.00% (Baseline) |
 
 ---
 
@@ -200,24 +200,24 @@ Evaluation metrics from `outputs/results/node_metrics.csv`:
 
 | Echelon Node | Baseline Pers. MSE | `lstm` Test MSE | `st_gcn_lstm_dir` Test MSE | `lstm` Skill Score | `st_gcn_lstm_dir` Skill Score | Graph Skill Advantage |
 |---|---|---|---|---|---|---|
-| **Supplier** | $1.95 \times 10^{-4}$ | $1.59 \times 10^{-4}$ | **$1.53 \times 10^{-4}$** | +18.6% | **+21.8%** | **+3.2%** |
-| **Manufacturer** | $6.84 \times 10^{-2}$ | $5.45 \times 10^{-2}$ | **$5.21 \times 10^{-2}$** | +20.2% | **+23.9%** | +3.7% |
-| **Distributor** | $2.91 \times 10^{-2}$ | **$1.49 \times 10^{-2}$** | $1.74 \times 10^{-2}$ | **+49.0%** | +40.2% | -8.8% |
-| **Retailer** | $7.75 \times 10^{-3}$ | **$7.04 \times 10^{-3}$** | $7.39 \times 10^{-3}$ | **+9.1%** | +4.7% | -4.4% |
+| **Supplier** | $3.60\times 10^{-4}$ | $3.48\times 10^{-4}$ | $2.76\times 10^{-4}$ | +3.4% | +23.4% | +20.0% |
+| **Manufacturer** | $4.51\times 10^{-2}$ | $3.39\times 10^{-2}$ | $3.32\times 10^{-2}$ | +24.8% | +26.5% | +1.6% |
+| **Distributor** | $5.18\times 10^{-2}$ | $2.90\times 10^{-2}$ | $2.69\times 10^{-2}$ | +44.1% | +48.0% | +3.9% |
+| **Retailer** | $6.45\times 10^{-3}$ | $2.33\times 10^{-3}$ | $1.98\times 10^{-3}$ | +64.0% | +69.3% | +5.4% |
 
 ---
 
 ### 4.4 Operational Risk Tercile Classification & Confusion Matrix
 
-Across all 4,776 test evaluation points ($1,194 \text{ windows} \times 4 \text{ echelons}$), predictions were quantized into operational severity terciles (Low: $[0, 33\%]$, Medium: $(33\%, 66\%]$, High: $(66\%, 100\%]$):
+Across all 231,500 test evaluation points ($57{,}875 \text{ windows} \times 4 \text{ echelons}$), predictions were quantized into operational severity terciles (Low: $[0, 33\%]$, Medium: $(33\%, 66\%]$, High: $(66\%, 100\%]$):
 
 | Actual \ Predicted | Predicted Low | Predicted Medium | Predicted High | Total Actual |
 |---|---|---|---|---|
-| **Actual Low** | **2,217** (46.4%) | 107 (2.2%) | 46 (1.0%) | 2,370 |
-| **Actual Medium** | 16 (0.3%) | **655** (13.7%) | 388 (8.1%) | 1,059 |
-| **Actual High** | 13 (0.3%) | 134 (2.8%) | **1,200** (25.1%) | 1,347 |
+| **Actual Low** | **48,359** (20.9%) | 5,155 (2.2%) | 551 (0.2%) | 54,065 |
+| **Actual Medium** | 4,692 (2.0%) | **71,284** (30.8%) | 10,314 (4.5%) | 86,290 |
+| **Actual High** | 528 (0.2%) | 15,460 (6.7%) | **75,157** (32.5%) | 91,145 |
 
-Severe misclassifications (Low predicted as High, or High predicted as Low) occur in only **1.2%** of cases (59 out of 4,776 instances).
+Severe misclassifications (Low predicted as High, or High predicted as Low) occur in **0.47%** of cases (1,079 out of 231,500 instances).
 
 ---
 
