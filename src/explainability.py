@@ -66,6 +66,7 @@ class RiskExplainer:
         feat_abs, time_abs = abs_a.sum(axis=0), abs_a.sum(axis=1)
         return {
             "target_node": target_node,
+            "residual_delta": residual_delta,                     # True: values below are changes vs y_t
             "predicted_risk": f_x,
             "baseline_risk": f_b,
             "completeness_gap": float(a.sum() - (f_x - f_b)),     # should be ~0; report it
@@ -95,8 +96,13 @@ def narrate(result: dict, seq_len: int = 10) -> str:
     steps_ago = seq_len - 1 - j
     when = "the most recent step (t)" if steps_ago == 0 else f"{steps_ago} step(s) before t"
     node = NODE_NAMES[result["target_node"]]
-    return (f"Forecast {node} risk = {result['predicted_risk']:.2f} "
-            f"(window-average baseline {result['baseline_risk']:.2f}). "
+    if result.get("residual_delta", False):   # predicted_risk / baseline_risk are changes vs current value
+        head = (f"Forecast {node} risk change vs. its current value = {result['predicted_risk']:+.2f} "
+                f"(baseline-input change {result['baseline_risk']:+.2f}). ")
+    else:
+        head = (f"Forecast {node} risk = {result['predicted_risk']:.2f} "
+                f"(baseline-input forecast {result['baseline_risk']:.2f}). ")
+    return (head +
             f"Most influential input: {FEATURE_NAMES[k]} ({fi[k]:.0%} of attribution), which {sign} the forecast. "
             f"Most influential time step: {when} ({ft[j]:.0%}). "
             f"Upstream echelons contribute {upstream_share(result):.0%}.")

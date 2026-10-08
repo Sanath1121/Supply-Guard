@@ -170,6 +170,38 @@ class TestPhase7App(unittest.TestCase):
 
         self.assertEqual(len(violations), 0, f"Found forbidden tokens in app/:\n" + "\n".join(violations))
 
+    def test_09_explanation_cache_keyed_by_model(self):
+        """Switching model/graph mode/seed must not return another model's cached attribution."""
+        from src.config import Config
+        from app.utils.artifacts import get_model, predict_window
+        from app.utils.explain_service import compute_explanation
+
+        keys = [("st_gcn_lstm", "directed", 42), ("st_gcn_lstm", "symmetric", 43), ("lstm", "directed", 44)]
+        for k in keys:
+            _, loaded, _, _ = get_model(*k)
+            if not loaded:
+                self.skipTest(f"Trained checkpoint for {k} not available")
+
+        rng = np.random.default_rng(0)
+        seq = rng.random((Config.SEQ_LEN, Config.NUM_INPUT_FEATURES)).astype(np.float32)
+        baseline = tuple([0.5] * Config.NUM_INPUT_FEATURES)   # explicit: avoids loading the dataset
+        for k in keys:
+            res, err = compute_explanation(":".join(map(str, k)), seq, 3, baseline_tuple=baseline)
+            self.assertIsNone(err)
+            model, _, _, _ = get_model(*k)
+            expected = float(predict_window(model, seq)[3])
+            self.assertAlmostEqual(res["predicted_risk"], expected, places=5,
+                                   msg=f"Explanation for {k} does not come from that model")
+
+    def test_10_rq_verdicts_from_real_results(self):
+        """The real overall_metrics.csv (short names st_gcn_lstm_dir/_sym) must yield verdicts, not Pending."""
+        df = load_overall_metrics()
+        if df is None or df.empty:
+            self.skipTest("outputs/results/overall_metrics.csv not available")
+        v = evaluate_rq_verdicts(df)
+        for rq in ("RQ1", "RQ2", "RQ3"):
+            self.assertNotEqual(v[rq]["state"], "pending", f"{rq} stayed Pending: {v[rq]['details']}")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -313,6 +313,11 @@ def main(cfg=None, models=None, seeds=None, cli_args=None):
             if os.path.exists(path) and os.path.exists(loss_file) and not args.force:
                 print(f"[{name} seed={seed}] [Skip] Checkpoint and loss history exist: {path}")
                 continue
+            if os.path.exists(path) and not args.force:
+                # Checkpoint without its loss history: don't overwrite it silently, and don't abort the grid
+                print(f"[{name} seed={seed}] [Skip] Checkpoint exists but loss history {loss_file} is missing; "
+                      f"rerun with --force to retrain it.")
+                continue
 
             t0 = time.time()
             print(f"[{name} seed={seed}]")

@@ -15,15 +15,32 @@ from src.config import Config
 
 
 @st.cache_resource(show_spinner=False)
-def get_explainer(_model: torch.nn.Module, baseline_arr: Optional[Tuple[float, ...]] = None) -> RiskExplainer:
+def get_train_mean_baseline() -> Optional[Tuple[float, ...]]:
+    """Training-partition mean feature vector (scaled), the IG baseline used in the paper
+    and scripts/generate_attributions.py. None if the raw dataset is unavailable."""
+    import os
+    if not os.path.exists(Config.RAW_DATA_PATH):
+        return None
+    try:
+        from src.dataset import build_datasets
+        _, _, _, _, info = build_datasets(Config(), save_scaler=False)
+        return tuple(float(v) for v in info["train_mean"])
+    except Exception:
+        return None
+
+
+@st.cache_resource(show_spinner=False)
+def get_explainer(model_key: str, _model: torch.nn.Module,
+                  baseline_arr: Optional[Tuple[float, ...]] = None) -> RiskExplainer:
     """Build and cache a RiskExplainer instance for the given model.
-    
-    Uses training-mean baseline if provided, otherwise zeros.
+
+    Cached by model_key and baseline (`_model` itself is not hashed by Streamlit, so
+    model_key must identify it). Uses the given baseline, otherwise zeros.
     """
     if baseline_arr is not None:
         baseline = torch.tensor(baseline_arr, dtype=torch.float32)
     else:
-        # Default baseline: zero feature vector
+        # Fallback baseline: zero feature vector
         baseline = torch.zeros(Config.NUM_INPUT_FEATURES, dtype=torch.float32)
     return RiskExplainer(_model, baseline, steps=64)
 
@@ -35,27 +52,31 @@ def _hash_seq(seq: np.ndarray) -> str:
 
 @st.cache_data(show_spinner=False)
 def compute_explanation(
-    _model_key: str,
+    model_key: str,
     seq: np.ndarray,
     target_node: int,
     residual_delta: bool = False,
     baseline_tuple: Optional[Tuple[float, ...]] = None
 ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     """Compute attribution for a single target node.
-    
-    Cached by model key, sequence hash, target node, and residual mode.
+
+    Cached by model key, sequence hash, target node, residual mode and baseline
+    (model_key must NOT be underscore-prefixed, or Streamlit drops it from the cache key).
+    baseline_tuple=None uses the training-mean baseline (zeros if the dataset is missing).
     Returns: (result_dict, error_message)
     """
     try:
         from app.utils.artifacts import get_model
         # Parse model_key: e.g. "st_gcn_lstm:directed:42"
-        parts = _model_key.split(":")
+        parts = model_key.split(":")
         m_name = parts[0]
         g_mode = parts[1] if len(parts) > 1 else "directed"
         seed = int(parts[2]) if len(parts) > 2 else 42
 
         model, _, _, _ = get_model(m_name, g_mode, seed)
-        explainer = get_explainer(model, baseline_tuple)
+        if baseline_tuple is None:
+            baseline_tuple = get_train_mean_baseline()
+        explainer = get_explainer(model_key, model, baseline_tuple)
         
         seq_tensor = torch.tensor(seq, dtype=torch.float32)
         res = explainer.explain(seq_tensor, target_node, residual_delta=residual_delta)
@@ -66,7 +87,7 @@ def compute_explanation(
 
 @st.cache_data(show_spinner=False)
 def compute_all_edge_shares(
-    _model_key: str,
+    model_key: str,
     seq: np.ndarray,
     baseline_tuple: Optional[Tuple[float, ...]] = None
 ) -> Tuple[Optional[Dict[Tuple[str, str], float]], Optional[str]]:
@@ -86,7 +107,7 @@ def compute_all_edge_shares(
     ]
     
     for (u, v), tgt_idx, feat_idx in edges_to_query:
-        res, err = compute_explanation(_model_key, seq, tgt_idx, residual_delta=False, baseline_tuple=baseline_tuple)
+        res, err = compute_explanation(model_key, seq, tgt_idx, residual_delta=False, baseline_tuple=baseline_tuple)
         if err or res is None:
             return None, err or f"Failed to explain target {v}"
         

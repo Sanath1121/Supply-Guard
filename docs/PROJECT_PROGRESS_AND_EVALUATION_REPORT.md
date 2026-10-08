@@ -4,10 +4,10 @@
 **Academic Basis:** Hybrid GNN-LSTM Spatiotemporal Model (*Farzhana I., Dev Harris L., Shreyas S.*, 8th ICCMC 2025, DOI: 10.1109/ICCMC65190.2025.11140739)  
 **Dataset:** *Banerjee et al. (2019)*, Mendeley Data V2 (CC BY 4.0, DOI: 10.17632/gystn6d3r4.2)  
 **Evaluation Target:** Project Review Committee / Faculty Advisor / Project Manager  
-**Reporting Date:** October 6, 2026  
+**Reporting Date:** October 6, 2026 (status snapshot; Phase 5 figures reconciled with `outputs/results` and over-claims corrected on October 9, 2026)  
 **Current Milestone:** **Phases 0 through 6 Complete & Verified** (Gates 0, 1, 2, 3, 4, 5, 6 Passed 100% — 37/37 Gate Checks, 20 Trained Models Verified, Evaluation Benchmarks Frozen, Explainability Engine Validated)  
 **Phase 7 Status:** Specification Formally Established (`docs/PHASE_7_FRONTEND_CONTEXT_AND_STREAMLIT_DECISION.md`) — Ready for Implementation  
-**Project Health:** 🟢 **EXCELLENT (7 of 9 Phases Complete — On Schedule, All Pre-Registered Claims Empirically Confirmed)**  
+**Project Health:** 🟢 **7 of 9 Phases Complete at this snapshot** (not every claim holds: Naive Persistence remains the most accurate on 3-tier severity, and the graph-free ablation is architecture-confounded; see §1 and §4.4)  
 
 ---
 
@@ -15,7 +15,7 @@
 
 **SupplyGuard** is an advanced spatiotemporal machine learning system designed to forecast and explain multi-echelon supply chain disruption risks across four interdependent tiers: **Supplier $\to$ Manufacturer $\to$ Distributor $\to$ Retailer**. The project re-implements the IEEE ICCMC 2025 hybrid GCN-LSTM paper as a rigorous baseline, and substantially extends it into an echelon-level directed spatiotemporal architecture with residual persistence forecasting, validated gradient explainability (Integrated Gradients), and an interactive web dashboard.
 
-As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirically validated, and cryptographically verified**:
+As of October 6, 2026, **7 of the 9 project phases are completed and pass their gate tests** (checkpoint files are SHA-256 verified):
 - **Phase 0:** Environment setup, pinned data ingestion, and bounded null policy.
 - **Phase 1:** Exploratory data analysis, autocorrelation profiling, and empirical horizon gating ($H=10$ min).
 - **Phase 2:** Zero-leakage data segmentation, bounded forward-fill, and chronological partitioning.
@@ -39,7 +39,7 @@ As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirical
 |  [PHASE 2] Data Pipeline Hardening    | Status: PASSED (Gate 2) | Gap segmentation, zero-leakage split  |
 |  [PHASE 3] Models & Baselines         | Status: PASSED (Gate 3) | GCN/LSTM shapes, 2-hop grads, params  |
 |  [PHASE 4] Training on Colab GPU      | Status: PASSED (Gate 4) | 20 runs complete on A100, weights dl  |
-|  [PHASE 5] Evaluation & Benchmarking  | Status: PASSED (Gate 5) | Test MSE 0.000273, beats LSTM >1 std  |
+|  [PHASE 5] Evaluation & Benchmarking  | Status: PASSED (Gate 5) | Test MSE 0.000273 (31% below persistence)  |
 |  [PHASE 6] Explainability Validation  | Status: PASSED (Gate 6) | Delta-IG, 70% deletion test pass rate |
 |  [PHASE 7] Streamlit Dashboard        | Status: SPEC LOCKED     | 4 tabs, replay engine, Plotly topology|
 |  [PHASE 8] Viva Defense & Clean Run   | Status: SCHEDULED       | End-to-end reproduction, documentation|
@@ -51,18 +51,18 @@ As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirical
    - **Naive Persistence Baseline Test MSE:** `0.000397` ($R^2 = 0.9613$).
    - **Temporal Baseline (`lstm`) Test MSE:** `0.000284 ± 0.000003` ($R^2 = 0.9723$).
    - **Proposed Model (`st_gcn_lstm_dir`) Test MSE:** `0.000273 ± 0.000003` ($R^2 = 0.9734$).
-   - **Empirical Margin:** Difference (`0.000011`) exceeds combined 1-std threshold (`0.000006`) by a factor of **$1.83\times$** ($+31.16\%$ overall MSE improvement vs. persistence).
-   - **Authorized Pre-Registered Claim:**  
-     > **"Graph structure improves echelon-level forecasts on this dataset."**
+   - **Difference (`lstm` − `st_gcn_lstm_dir`):** `0.000011`, larger than the 1-std threshold (`0.000006`); the ablation is architecture-confounded, so this is not proof that graph structure alone causes the gain.
+   - **Evaluator verdict (pre-registered claim):**  
+     > **"Graph structure improves echelon-level forecasts on this dataset"**
 2. **Upstream Disruption Warning Skill:**
-   - On the critical **Supplier** tier, `st_gcn_lstm_dir` achieves a relative skill score of **23.42% $\pm$ 0.95%** ($MSE = 6.64 \times 10^{-5}$) vs. only **3.42% $\pm$ 0.67%** ($MSE = 8.38 \times 10^{-5}$) for pure `lstm` — an improvement of **$6.8\times$** in early disruption detection skill.
+   - On the **Supplier** tier, `st_gcn_lstm_dir` achieves a relative skill score of **23.4%** vs. **3.4%** for `lstm`.
 3. **Directional vs. Symmetric Message Passing:**
-   - Asymmetric directed convolution (`0.000273`) significantly outperforms symmetric graph convolution (`0.000330`), validating that decomposing physical flow ($A_{\text{down}}$) from delay feedback ($A_{\text{up}}$) prevents relational information blurring.
+   - Directed convolution (`0.000273`) outperforms symmetric (`0.000330 ± 0.000061`); two symmetric seeds collapsed to the persistence solution during training.
 4. **Explainability & Deletion Testing:**
    - Completeness Axiom verified over 64 Riemann steps ($\text{mean gap} = 0.0017 \ll 0.05$).
    - $\Delta$-attribution successfully isolates dynamic network adjustments from static autocorrelation.
    - Deletion test pass rate: **70.0%** against random feature removal (beating random removal) and **90.0%** in raw prediction mode.
-   - Symmetric graph upstream attribution (24.2%) exceeds directed graph (18.8%), proving bidirectional diffusion leakage in undirected topologies.
+   - Symmetric graph upstream attribution (24.2%) exceeds directed graph (18.8%) on the 10 benchmark windows (selected for large corrections); this is a small sample and does not prove a mechanism.
 5. **Software Quality & Cryptographic Integrity:**
    - **100% Pass Rate** across Gates 0 through 6 (**37/37 gate checks** passing in 33.6s via `tests/run_phase_tests.py --up-to 6`).
    - **100% Pass Rate** across 16 adversarial, unit, and smoke test suites (**130+ formal assertions**).
@@ -185,12 +185,12 @@ Evaluation metrics from `outputs/results/overall_metrics.csv` evaluated on the u
 
 | Model Architecture | Target Space | Test MSE ($\pm$ Std) | Test MAE ($\pm$ Std) | Test $R^2$ ($\pm$ Std) | % MSE Improvement vs. Persistence |
 |---|---|---|---|---|---|
-| **`st_gcn_lstm_dir`** | Derived 4-Node Mean | **0.000273 $\pm$ 0.000003** | **0.005238 $\pm$ 0.000259** | **0.9734 $\pm$ 0.0003** | **+31.16% $\pm$ 0.68%** |
+| **`st_gcn_lstm_dir`** | Derived 4-Node Mean | 0.000273 $\pm$ 0.000003 | 0.005238 $\pm$ 0.000259 | 0.9734 $\pm$ 0.0003 | +31.16% $\pm$ 0.68% |
 | **`lstm`** | Derived 4-Node Mean | 0.000284 $\pm$ 0.000003 | 0.005118 $\pm$ 0.000093 | 0.9723 $\pm$ 0.0003 | +28.47% $\pm$ 0.82% |
 | **`paper_overall`** | Direct Scalar TRI | 0.000288 $\pm$ 0.000008 | 0.006088 $\pm$ 0.000466 | 0.9719 $\pm$ 0.0008 | +27.44% $\pm$ 2.08% |
 | **`st_gcn_lstm_sym`** | Derived 4-Node Mean | 0.000330 $\pm$ 0.000061 | 0.005385 $\pm$ 0.000147 | 0.9678 $\pm$ 0.0059 | +16.77% $\pm$ 15.34% |
-| **`ar10_ridge`** ($\alpha=10$) | Derived 4-Node Mean | 0.000354 (deterministic) | 0.006351 | 0.9655 | +10.81% |
-| **`persistence`** | Derived 4-Node Mean | 0.000397 (deterministic) | 0.005493 | 0.9613 | 0.00% (Baseline) |
+| **`ar10_ridge`** ($\alpha=10$) | Derived 4-Node Mean | 0.000354 (deterministic) | 0.006351 (deterministic) | 0.9655 (deterministic) | +10.81% |
+| **`persistence`** | Derived 4-Node Mean | 0.000397 (deterministic) | 0.005493 (deterministic) | 0.9613 (deterministic) | 0.00% (Baseline) |
 
 ---
 
@@ -198,36 +198,26 @@ Evaluation metrics from `outputs/results/overall_metrics.csv` evaluated on the u
 
 Evaluation metrics from `outputs/results/node_metrics.csv`:
 
-| Echelon Node | Metric | Naive Persistence | Ridge-AR(10) | Temporal LSTM | Proposed `st_gcn_lstm_dir` | Benefit (`dir` vs `lstm`) |
+| Echelon Node | Baseline Pers. MSE | `lstm` Test MSE | `st_gcn_lstm_dir` Test MSE | `lstm` Skill Score | `st_gcn_lstm_dir` Skill Score | Graph Skill Advantage |
 |---|---|---|---|---|---|---|
-| **Supplier** | Test MSE | $8.67 \times 10^{-5}$ | $7.74 \times 10^{-5}$ | $8.38 \pm 0.06 \times 10^{-5}$ | **$6.64 \pm 0.08 \times 10^{-5}$** | **$1.74 \times 10^{-5}$ lower MSE** |
-| | Skill Score vs. Pers. | 0.00% | +10.74% | +3.42% $\pm$ 0.67% | **+23.42% $\pm$ 0.95%** | **+$20.00\%$ skill gain ($6.8\times$)** |
-| | $R^2$ on Change $\Delta y$ | 0.0000 | 0.1074 | 0.0342 $\pm$ 0.0067 | **0.2342 $\pm$ 0.0095** | **+$20.00\%$ variance explained** |
-| **Manufacturer**| Test MSE | 0.003739 | 0.003206 | 0.002811 $\pm$ 0.000027 | **0.002749 $\pm$ 0.000019** | **$0.062 \times 10^{-3}$ lower MSE** |
-| | Skill Score vs. Pers. | 0.00% | +14.24% | +24.82% $\pm$ 0.72% | **+26.47% $\pm$ 0.51%** | **+$1.65\%$ skill gain** |
-| | $R^2$ on Change $\Delta y$ | 0.0000 | 0.1424 | 0.2482 $\pm$ 0.0072 | **0.2647 $\pm$ 0.0051** | **+$1.65\%$ variance explained** |
-| **Distributor** | Test MSE | 0.001276 | 0.001152 | 0.000714 $\pm$ 0.000012 | **0.000663 $\pm$ 0.000009** | **$0.051 \times 10^{-3}$ lower MSE** |
-| | Skill Score vs. Pers. | 0.00% | +9.70% | +44.06% $\pm$ 0.91% | **+48.00% $\pm$ 0.72%** | **+$3.94\%$ skill gain** |
-| | $R^2$ on Change $\Delta y$ | 0.0000 | 0.0970 | 0.4406 $\pm$ 0.0091 | **0.4800 $\pm$ 0.0072** | **+$3.94\%$ variance explained** |
-| **Retailer** | Test MSE | 0.001098 | 0.000973 | 0.000396 $\pm$ 0.000020 | **0.000337 $\pm$ 0.000009** | **$0.059 \times 10^{-3}$ lower MSE** |
-| | Skill Score vs. Pers. | 0.00% | +11.36% | +63.96% $\pm$ 1.78% | **+69.34% $\pm$ 0.78%** | **+$5.38\%$ skill gain** |
-| | $R^2$ on Change $\Delta y$ | 0.0000 | 0.1136 | 0.6396 $\pm$ 0.0178 | **0.6934 $\pm$ 0.0078** | **+$5.38\%$ variance explained** |
+| **Supplier** | $3.60\times 10^{-4}$ | $3.48\times 10^{-4}$ | $2.76\times 10^{-4}$ | +3.4% | +23.4% | +20.0% |
+| **Manufacturer** | $4.51\times 10^{-2}$ | $3.39\times 10^{-2}$ | $3.32\times 10^{-2}$ | +24.8% | +26.5% | +1.6% |
+| **Distributor** | $5.18\times 10^{-2}$ | $2.90\times 10^{-2}$ | $2.69\times 10^{-2}$ | +44.1% | +48.0% | +3.9% |
+| **Retailer** | $6.45\times 10^{-3}$ | $2.33\times 10^{-3}$ | $1.98\times 10^{-3}$ | +64.0% | +69.3% | +5.4% |
 
 ---
 
 ### 4.4 Operational Risk Tercile Classification & Confusion Matrix
 
-Across all 231,500 test evaluation points ($57,875 \text{ windows} \times 4 \text{ echelons}$), predictions were quantized into operational severity terciles (Low: $[0, 33\%]$, Medium: $(33\%, 66\%]$, High: $(66\%, 100\%]$):
+Across all 231,500 test evaluation points ($57{,}875 \text{ windows} \times 4 \text{ echelons}$), predictions were quantized into operational severity terciles (Low: $[0, 33\%]$, Medium: $(33\%, 66\%]$, High: $(66\%, 100\%]$):
 
-| Actual \ Predicted | Predicted Low | Predicted Medium | Predicted High | Total Actual | Class Recall |
-|---|---|---|---|---|---|
-| **Actual Low** | **74,185** | 2,982 | 0 | 77,167 | **96.14%** |
-| **Actual Medium** | 2,741 | **71,489** | 2,937 | 77,167 | **92.64%** |
-| **Actual High** | 0 | 2,819 | **74,347** | 77,166 | **96.35%** |
-| **Total Predicted** | 76,926 | 77,290 | 77,284 | **231,500** | — |
+| Actual \ Predicted | Predicted Low | Predicted Medium | Predicted High | Total Actual |
+|---|---|---|---|---|
+| **Actual Low** | **48,359** (20.9%) | 5,155 (2.2%) | 551 (0.2%) | 54,065 |
+| **Actual Medium** | 4,692 (2.0%) | **71,284** (30.8%) | 10,314 (4.5%) | 86,290 |
+| **Actual High** | 528 (0.2%) | 15,460 (6.7%) | **75,157** (32.5%) | 91,145 |
 
-- **Overall 3-Class Accuracy:** **95.04%** (220,021 / 231,500 correct classifications).
-- **Critical Safety Guarantee:** **0 false negatives on extreme events** (0 high-risk events misclassified as low risk).
+Severe misclassifications (Low predicted as High, or High predicted as Low) occur in **0.47%** of cases (1,079 out of 231,500 instances).
 
 ---
 
@@ -235,18 +225,18 @@ Across all 231,500 test evaluation points ($57,875 \text{ windows} \times 4 \tex
 
 From `outputs/results/attribution_examples.csv` evaluating the Retailer node ($c=3$):
 
-| Window | Target Node | Pred Risk $F(x)$ | Base Risk $F(x')$ | Completeness Gap | Upstream Share (Dir) | Upstream Share (Sym) | Drop Top Feature | Drop Random Feature | Drop Mean Others | Deletion Passed | Stability ($L_2$) | Most Influential Feature (% Share) |
+| Window Index | Target Node | Pred Risk $F(x)$ | Base Risk $F(x')$ | Completeness Gap | Upstream Share (Dir) | Upstream Share (Sym) | Drop Top Feature | Drop Random Feature | Drop Mean Others | Deletion Test Passed | Stability ($L_2$) | Most Influential Feature (% Share) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|
-| **573** | Retailer (3) | 0.22 | 0.00 | +0.00248 | 18.2% | 28.5% | 0.0894 | 0.0000 | 0.0170 | **Passed** | 0.1059 | Retailer RI (42%) |
-| **572** | Retailer (3) | 0.21 | 0.00 | -0.00067 | 8.7% | 24.1% | 0.0274 | 0.0000 | 0.0289 | **Passed** | 0.0789 | Total Cost (58%) |
-| **571** | Retailer (3) | 0.18 | 0.00 | +0.00091 | 7.4% | 20.0% | 0.0031 | 0.0050 | 0.0396 | *Failed* | 0.0834 | Total Cost (60%) |
-| **570** | Retailer (3) | 0.16 | 0.00 | +0.00230 | 7.7% | 16.7% | 0.0221 | 0.0250 | 0.0307 | *Failed* | 0.0730 | Total Cost (59%) |
-| **585** | Retailer (3) | 0.16 | 0.00 | -0.00157 | 5.7% | 38.0% | 0.1609 | 0.0338 | 0.0297 | **Passed** | 0.0840 | Retailer RI (76%) |
-| **1762** | Retailer (3) | 0.15 | 0.00 | +0.00066 | 30.5% | 25.1% | 0.1152 | 0.1533 | 0.0433 | *Failed* | 0.2378 | Total Cost (59%) |
-| **1766** | Retailer (3) | 0.15 | 0.00 | -0.00038 | 20.3% | 19.9% | 0.1438 | 0.0000 | 0.0233 | **Passed** | 0.2482 | Total Cost (72%) |
-| **1763** | Retailer (3) | 0.15 | 0.00 | -0.00222 | 28.3% | 19.3% | 0.1325 | 0.0000 | 0.0376 | **Passed** | 0.2830 | Total Cost (60%) |
-| **1761** | Retailer (3) | 0.14 | 0.00 | +0.00115 | 37.9% | 24.3% | 0.1255 | 0.0090 | 0.0415 | **Passed** | 0.1206 | Total Cost (49%) |
-| **1764** | Retailer (3) | 0.13 | 0.00 | -0.00432 | 23.4% | 25.8% | 0.1318 | 0.0000 | 0.0231 | **Passed** | 0.2653 | Total Cost (67%) |
+| **573** | Retailer (3) | 0.22 | 0.00 | +0.00248 | 18.2% | 28.5% | 0.0894 | 0.0000 (Supplier) | 0.0170 | **Passed** | 0.1059 | Retailer RI (42%) |
+| **572** | Retailer (3) | 0.21 | 0.00 | -0.00067 | 8.7% | 24.1% | 0.0274 | 0.0000 (Supplier) | 0.0289 | **Passed** | 0.0789 | Total Cost (58%) |
+| **571** | Retailer (3) | 0.18 | 0.00 | +0.00091 | 7.4% | 20.0% | 0.0031 | 0.0050 (Distributor) | 0.0396 | *Failed* | 0.0834 | Total Cost (60%) |
+| **570** | Retailer (3) | 0.16 | 0.00 | +0.00230 | 7.7% | 16.7% | 0.0221 | 0.0250 (Manufacturer) | 0.0307 | *Failed* | 0.0730 | Total Cost (59%) |
+| **585** | Retailer (3) | 0.16 | 0.00 | -0.00157 | 5.7% | 38.0% | 0.1609 | 0.0338 (Manufacturer) | 0.0297 | **Passed** | 0.0840 | Retailer RI (76%) |
+| **1762** | Retailer (3) | 0.15 | 0.00 | +0.00066 | 30.5% | 25.1% | 0.1152 | 0.1533 (Manufacturer) | 0.0433 | *Failed* | 0.2378 | Total Cost (59%) |
+| **1766** | Retailer (3) | 0.15 | 0.00 | -0.00038 | 20.3% | 19.9% | 0.1438 | 0.0000 (Supplier) | 0.0233 | **Passed** | 0.2482 | Total Cost (72%) |
+| **1763** | Retailer (3) | 0.15 | 0.00 | -0.00222 | 28.3% | 19.3% | 0.1325 | 0.0000 (Supplier) | 0.0376 | **Passed** | 0.2830 | Total Cost (60%) |
+| **1761** | Retailer (3) | 0.14 | 0.00 | +0.00115 | 37.9% | 24.3% | 0.1255 | 0.0090 (Retailer) | 0.0415 | **Passed** | 0.1206 | Total Cost (49%) |
+| **1764** | Retailer (3) | 0.13 | 0.00 | -0.00432 | 23.4% | 25.8% | 0.1318 | 0.0000 (Supplier) | 0.0231 | **Passed** | 0.2653 | Total Cost (67%) |
 
 - **Deletion Test Pass Rate:** **70.0%** (7/10 windows beat random feature removal; **90.0%** pass rate in raw prediction mode).
 - **Completeness Gap:** Mean gap $0.0017 \ll 0.05$, validating exact path integration.
@@ -299,16 +289,16 @@ RESULT: ALL 37 CHECKED PHASE GATES PASSED! (33.6s total runtime)
 ## 6. Viva Voce Defense Guide & Review Board FAQ
 
 ### Q1: Why did you reframe Research Question 2 (RQ2) rather than assuming topological graph propagation is strong?
-> **Answer:** Exploratory data analysis in Phase 1 revealed that Pearson cross-correlation between adjacent supply chain echelons is relatively weak ($0.04$ to $0.32$). Rather than making an unverified assertion that graph structure dominates, we reframed RQ2 as an empirical hypothesis test: *"Does graph convolution provide measurable predictive gain over a purely temporal LSTM?"* Phase 5 confirmed that it does ($0.000273$ vs. $0.000284$, beating the 1-std boundary), with the strongest benefit occurring at the Supplier tier (+20.0% skill gain).
+> **Answer:** Exploratory data analysis in Phase 1 revealed that Pearson cross-correlation between adjacent supply chain echelons is relatively weak ($0.04$ to $0.32$). Rather than making an unverified assertion that graph structure dominates, we reframed RQ2 as an empirical hypothesis test: *"Does graph convolution provide measurable predictive gain over a purely temporal LSTM?"* In Phase 5 the directed ST-GCN-LSTM had lower MSE than the LSTM ($0.000273$ vs. $0.000284$, a gap larger than the summed 1-std threshold), with the largest difference at the Supplier tier (+20.0 percentage points of skill). Because the two models also differ in architecture (shared per-node LSTM with echelon embeddings vs. one joint LSTM), we do not attribute this gain to graph structure alone; an identity-adjacency control was not run.
 
 ### Q2: Why is the naive persistence baseline so difficult to beat in this dataset?
 > **Answer:** Operational supply chain indices measured at high frequency exhibit high autocorrelation ($\rho_1 > 0.99$). At a 2-minute horizon ($H=1$), naive persistence achieves an $R^2 \approx 0.99$, making machine learning redundant. By empirical gating, we lengthened the horizon to 10 minutes ($H=5$), dropping persistence to $R^2 \approx 0.9613$ ($MSE = 0.000397$). This established an operationally meaningful forecast window where our directed GCN-LSTM achieved a 31.16% MSE reduction.
 
-### Q3: Why does `st_gcn_lstm_dir` beat `st_gcn_lstm_sym`?
-> **Answer:** Physical supply chains possess strict operational directionality: physical goods flow downstream ($S \to M \to D \to R$) while purchase orders and delay signals propagate upstream ($R \to D \to M \to S$). Symmetric graph convolution aggregates both directions using a single undirected matrix $\tilde{A}$, which blurs relational signal propagation. The directed architecture assigns separate learnable parameters ($W_{\text{down}}, W_{\text{up}}$), preserving directional flow.
+### Q3: Why does `st_gcn_lstm_dir` have lower error than `st_gcn_lstm_sym`?
+> **Answer:** The directed model's mean MSE is lower ($0.000273 \pm 0.000003$ vs. $0.000330 \pm 0.000061$), but the gap is within the summed seed std because two symmetric seeds collapsed, so it is not a significant difference by our 1-std rule. Our design motivation for the directed variant: Physical supply chains possess strict operational directionality: physical goods flow downstream ($S \to M \to D \to R$) while purchase orders and delay signals propagate upstream ($R \to D \to M \to S$). Symmetric graph convolution aggregates both directions using a single undirected matrix $\tilde{A}$, which blurs relational signal propagation. The directed architecture assigns separate learnable parameters ($W_{\text{down}}, W_{\text{up}}$), preserving directional flow.
 
 ### Q4: Why did seeds 43 and 44 collapse in the symmetric model?
-> **Answer:** The symmetric architecture has a flatter optimization landscape around the identity persistence solution ($\hat{y} = y_t$). For seeds 43 and 44, random weight initialization placed the network in a saddle point where gradient updates were insufficient to break symmetry before early stopping halted training. Rather than discarding these runs, we adopted Option A: we kept all 5 runs in the headline mean (0.001145) and reported the 3-seed converged mean (0.000962) separately.
+> **Answer:** For seeds 43 and 44 the symmetric model stopped at the persistence solution ($\hat{y} = y_t$; best val loss 0.001421, early-stopped after 17 and 11 epochs). The exact cause was not established (`scripts/diagnose_sym_collapse.py` is the diagnostic). Rather than discarding these runs, we adopted Option A: we kept all 5 runs in the headline mean (0.001145) and reported the 3-seed converged mean (0.000962) separately.
 
 ### Q5: Why is $\Delta$-attribution necessary for Integrated Gradients in this application?
 > **Answer:** When applying standard Integrated Gradients to autoregressive time-series, $>80\%$ of attribution is assigned to the target node's own latest observation ($x[-1, c]$) because persistence is the dominant carrier signal. $\Delta$-attribution defines $g(x) = f(x)[:, c] - x[-1, c]$, subtracting the static persistence baseline. This forces Integrated Gradients to explain the exact dynamic adjustment added by the neural network's spatio-temporal layers.
@@ -439,4 +429,4 @@ With Phase 0 through Phase 6 completed, verified, and pushed, the project transi
 
 ## 10. Summary Conclusion & Project Readiness Verdict
 
-> **Evaluation Board Verdict:** The SupplyGuard project stands at **77.8% overall completion (7 of 9 phases complete)**, executing strictly ahead of schedule. The scientific, mathematical, and algorithmic foundation — data engineering, directed spatiotemporal graph modeling, cloud GPU training, multi-seed statistical evaluation, and axiomatic gradient explainability — is fully implemented, verified, and frozen. All 7 completed phases have passed their automated gate criteria with zero regressions across **130+ formal tests and validation checks**. The repository is 100% prepared to begin **Phase 7 (SupplyGuard Dashboard)**.
+> **Evaluation Board Verdict:** The SupplyGuard project stands at **77.8% overall completion (7 of 9 phases complete)** at this snapshot. The scientific, mathematical, and algorithmic foundation — data engineering, directed spatiotemporal graph modeling, cloud GPU training, multi-seed statistical evaluation, and axiomatic gradient explainability — is fully implemented, verified, and frozen. All 7 completed phases have passed their automated gate criteria with zero regressions across **130+ formal tests and validation checks**. The repository is 100% prepared to begin **Phase 7 (SupplyGuard Dashboard)**.

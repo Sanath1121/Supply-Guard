@@ -72,10 +72,9 @@ The top of the dashboard displays an honest, live status strip that inspects the
 Per the project integrity charter:
 1. **Zero Fabricated Metrics**: If checkpoints or evaluation CSVs are missing, the UI renders explicit empty states with exact reproduction commands (`python -m training.train`, `python -m training.evaluate`).
 2. **Strict Test Partition Replay**: Predictions are made strictly on historical test windows. No sliders allow manual sensor fabrication in the operational dashboard.
-3. **Isolated Sandbox Mode**: Experimental shock testing or custom CSV uploads are feature-gated and strictly isolated with persistent warning banners:
+3. **Isolated Sandbox Mode**: Experimental shock testing and custom CSV uploads are available by default on their own page, strictly isolated from the test-partition replay with persistent warning banners. To hide the page, set the environment variable to `0`:
    ```bash
-   # Enable sandbox mode via environment variable
-   export SG_ENABLE_SANDBOX=1
+   export SG_ENABLE_SANDBOX=0
    streamlit run app/streamlit_app.py
    ```
 

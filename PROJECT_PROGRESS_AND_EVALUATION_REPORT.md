@@ -1,13 +1,13 @@
-# SupplyGuard â€” Comprehensive Project Progress & Evaluation Report
+# SupplyGuard — Comprehensive Project Progress & Evaluation Report
 
-**Project Title:** SupplyGuard â€” Real-Time Multi-Echelon Supply Chain Risk Alert System  
+**Project Title:** SupplyGuard — Real-Time Multi-Echelon Supply Chain Risk Alert System  
 **Academic Basis:** Hybrid GNN-LSTM Spatiotemporal Model (*Farzhana I., Dev Harris L., Shreyas S.*, 8th ICCMC 2025, DOI: 10.1109/ICCMC65190.2025.11140739)  
 **Dataset:** *Banerjee et al. (2019)*, Mendeley Data V2 (CC BY 4.0, DOI: 10.17632/gystn6d3r4.2)  
 **Evaluation Target:** Project Review Committee / Faculty Advisor / Project Manager  
-**Reporting Date:** October 6, 2026  
-**Current Milestone:** **Phases 0 through 6 Complete & Verified** (Gates 0, 1, 2, 3, 4, 5, 6 Passed 100% â€” 37/37 Gate Checks, 20 Trained Models Verified, Evaluation Benchmarks Frozen, Explainability Engine Validated)  
-**Phase 7 Status:** Specification Formally Established (`docs/PHASE_7_FRONTEND_CONTEXT_AND_STREAMLIT_DECISION.md`) â€” Ready for Implementation  
-**Project Health:** ðŸŸ¢ **EXCELLENT (7 of 9 Phases Complete â€” On Schedule, All Pre-Registered Claims Empirically Confirmed)**  
+**Reporting Date:** October 6, 2026 (status snapshot; Phase 5 figures reconciled with `outputs/results` and over-claims corrected on October 9, 2026)  
+**Current Milestone:** **Phases 0 through 6 Complete & Verified** (Gates 0, 1, 2, 3, 4, 5, 6 Passed 100% — 37/37 Gate Checks, 20 Trained Models Verified, Evaluation Benchmarks Frozen, Explainability Engine Validated)  
+**Phase 7 Status:** Specification Formally Established (`docs/PHASE_7_FRONTEND_CONTEXT_AND_STREAMLIT_DECISION.md`) — Ready for Implementation  
+**Project Health:** 🟢 **7 of 9 Phases Complete at this snapshot** (not every claim holds: Naive Persistence remains the most accurate on 3-tier severity, and the graph-free ablation is architecture-confounded; see §1 and §4.4)  
 
 ---
 
@@ -15,7 +15,7 @@
 
 **SupplyGuard** is an advanced spatiotemporal machine learning system designed to forecast and explain multi-echelon supply chain disruption risks across four interdependent tiers: **Supplier $\to$ Manufacturer $\to$ Distributor $\to$ Retailer**. The project re-implements the IEEE ICCMC 2025 hybrid GCN-LSTM paper as a rigorous baseline, and substantially extends it into an echelon-level directed spatiotemporal architecture with residual persistence forecasting, validated gradient explainability (Integrated Gradients), and an interactive web dashboard.
 
-As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirically validated, and cryptographically verified**:
+As of October 6, 2026, **7 of the 9 project phases are completed and pass their gate tests** (checkpoint files are SHA-256 verified):
 - **Phase 0:** Environment setup, pinned data ingestion, and bounded null policy.
 - **Phase 1:** Exploratory data analysis, autocorrelation profiling, and empirical horizon gating ($H=10$ min).
 - **Phase 2:** Zero-leakage data segmentation, bounded forward-fill, and chronological partitioning.
@@ -62,7 +62,7 @@ As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirical
    - Completeness Axiom verified over 64 Riemann steps ($\text{mean gap} = 0.0017 \ll 0.05$).
    - $\Delta$-attribution successfully isolates dynamic network adjustments from static autocorrelation.
    - Deletion test pass rate: **70.0%** against random feature removal (beating random removal) and **90.0%** in raw prediction mode.
-   - Symmetric graph upstream attribution (24.2%) exceeds directed graph (18.8%), proving bidirectional diffusion leakage in undirected topologies.
+   - Symmetric graph upstream attribution (24.2%) exceeds directed graph (18.8%) on the 10 benchmark windows (selected for large corrections); this is a small sample and does not prove a mechanism.
 5. **Software Quality & Cryptographic Integrity:**
    - **100% Pass Rate** across Gates 0 through 6 (**37/37 gate checks** passing in 33.6s via `tests/run_phase_tests.py --up-to 6`).
    - **100% Pass Rate** across 16 adversarial, unit, and smoke test suites (**130+ formal assertions**).
@@ -86,7 +86,7 @@ As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirical
 
 ## 3. Phase-by-Phase Progress & Engineering Deliverables
 
-### Phase 0: Environment, Scaffolding & Data Acquisition (Status: âœ… PASSED)
+### Phase 0: Environment, Scaffolding & Data Acquisition (Status: ✅ PASSED)
 - **Objective:** Establish a reproducible environment, download data, and pin data integrity.
 - **Key Deliverables & Test Verification:**
   - Standard repository layout created (`src/`, `training/`, `tests/`, `outputs/`, `docs/`, `data/raw/`).
@@ -96,7 +96,7 @@ As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirical
   - Explicit timestamp parsing locked to `%m/%d/%Y %I:%M:%S %p` (0 unparseable rows across 650k rows).
   - **Gate 0 Tests:** 5/5 passed in 7.07s.
 
-### Phase 1: Exploratory Data Analysis & Empirical Horizon Decision (Status: âœ… PASSED)
+### Phase 1: Exploratory Data Analysis & Empirical Horizon Decision (Status: ✅ PASSED)
 - **Objective:** Statistically profile the data and lock the forecasting horizon *before* model training.
 - **Key Deliverables & Test Verification:**
   - Executed notebook `notebooks/01_EDA.ipynb` (15 cells executed with 0 runtime errors).
@@ -106,7 +106,7 @@ As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirical
   - Horizon Gating: Proved that $H=2$ min is trivial ($R^2 = 0.9914$ on Manufacturer), whereas $H=10$ min drops persistence to $R^2 \approx 0.9029$, establishing a defensible prediction task.
   - **Gate 1 Tests:** 4/4 passed in 0.53s; Challenge Oracle: 3/3 passed.
 
-### Phase 2: Data Pipeline Hardening & Anti-Leakage Constraints (Status: âœ… PASSED)
+### Phase 2: Data Pipeline Hardening & Anti-Leakage Constraints (Status: ✅ PASSED)
 - **Objective:** Implement a 100% leak-free, gap-safe windowing pipeline on real data.
 - **Key Deliverables & Test Verification:**
   - Monotonic chronological sorting and dropping of exactly 2,363 duplicate timestamps.
@@ -116,7 +116,7 @@ As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirical
   - Zero-Leakage Chronological Partitioning: 80:10:10 split. `MinMaxScaler` fit **strictly on the 80% train partition** and saved to `outputs/models/scaler.joblib`.
   - **Gate 2 Tests:** 4/4 passed in 21.78s; Adversarial Suites 1 & 2: 15/15 passed.
 
-### Phase 3: Model Architecture Finalization & Graph Convolutions (Status: âœ… PASSED)
+### Phase 3: Model Architecture Finalization & Graph Convolutions (Status: ✅ PASSED)
 - **Objective:** Finalize and verify all production PyTorch neural network architectures, graph convolution modules, and baseline models.
 - **Key Deliverables & Test Verification:**
   - Single Input Tensor Contract: All architectures accept strictly one input tensor `seq [B, L, 5]`.
@@ -126,17 +126,17 @@ As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirical
   - Parameter Accounting (`param_counts.csv`): LSTM: 53.6k, Paper Hybrid: 57.7k, STGCN-sym: 61.7k, STGCN-dir: 63.9k.
   - **Gate 3 Tests:** 6/6 passed in 0.30s; Adversarial Suite 3: 8/8 passed.
 
-### Phase 4: Training Pipeline & Google Colab Execution (Status: âœ… PASSED)
+### Phase 4: Training Pipeline & Google Colab Execution (Status: ✅ PASSED)
 - **Objective:** Build, test, and execute the multi-model multi-seed training grid on cloud GPU hardware.
 - **Key Deliverables & Test Verification:**
   - `training/train.py`: CLI routing, CPU safety guardrail, and idempotent checkpoint-resume logic (`skip-if-exists`).
   - `notebooks/colab_train.ipynb`: Automated Colab notebook with GPU diagnostics, repo cloning, and Drive backup.
   - Executed on an **NVIDIA A100 GPU (40GB VRAM)** on Google Colab with `--batch-size 256` from commit `3d90be6`.
-  - Total training duration: **< 5 minutes (~200 seconds)** across 20 individual model runs.
+  - Total training duration: **2.33 hours (8,388 seconds)** across 20 individual model runs (685 total epochs logged).
   - All 20 model checkpoints (`.pt`) and loss histories (`.csv`) retrieved, extracted, cryptographically verified (`checkpoints.sha256`), and tested locally with `weights_only=True`.
   - **Gate 4 Tests:** 7/7 passed in 3.46s; Adversarial Suites 4 & 5: 21/21 passed; 20-Checkpoint PyTorch Audit: 20/20 passed.
 
-### Phase 5: Model Evaluation, Baselines & Benchmarking (Status: âœ… PASSED)
+### Phase 5: Model Evaluation, Baselines & Benchmarking (Status: ✅ PASSED)
 - **Objective:** Execute statistical evaluation of all trained models against linear and persistence baselines on held-out test data.
 - **Key Deliverables & Test Verification:**
   - Mini-batch memory-safe inference (`training/evaluate.py`, batch size 2,048, peak memory $<500$ MB) over all 57,875 test windows.
@@ -146,7 +146,7 @@ As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirical
   - Verified pre-registered headline claim: `st_gcn_lstm_dir` beats `lstm` beyond 1 std margin.
   - **Gate 5 Tests:** 5/5 passed in 0.08s; Adversarial Suite: 4/4 passed.
 
-### Phase 6: Explainability Engine with Statistical Validation (Status: âœ… PASSED)
+### Phase 6: Explainability Engine with Statistical Validation (Status: ✅ PASSED)
 - **Objective:** Implement and statistically validate the local feature and temporal attribution engine.
 - **Key Deliverables & Test Verification:**
   - `src/explainability.py`: `RiskExplainer` implementing Integrated Gradients over 64 Riemann steps.
@@ -157,7 +157,7 @@ As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirical
   - Anti-Causal Plain-English Narrative Engine: strictly prohibits the phrase "root cause" per `AGENTS.md` Rule 5.
   - **Gate 6 Tests:** 6/6 passed in 0.22s.
 
-### Phase 7: Streamlit Dashboard Architecture (Status: ðŸ“‹ SPECIFICATION LOCKED)
+### Phase 7: Streamlit Dashboard Architecture (Status: 📋 SPECIFICATION LOCKED)
 - **Objective:** Produce the Architectural Decision Record (ADR) and developer handoff specification for the frontend dashboard.
 - **Key Deliverables:**
   - Comprehensive 25 KB specification: `docs/PHASE_7_FRONTEND_CONTEXT_AND_STREAMLIT_DECISION.md`.
@@ -172,10 +172,10 @@ As of October 6, 2026, **7 of the 9 project phases are 100% completed, empirical
 
 | Model Architecture | Seed 42 | Seed 43 | Seed 44 | Seed 45 | Seed 46 | Mean Best Val Loss ($\pm$ Std) | Mean Wall-Clock (s) |
 |---|---|---|---|---|---|---|---|
-| **`lstm`** (Temporal Baseline) | 0.001387 | 0.001353 | 0.001286 | 0.001213 | 0.001337 | **0.001315 $\pm$ 0.000062** | 10.25s |
-| **`paper_overall`** (ICCMC 2025) | 0.000351 | 0.000346 | 0.000345 | 0.000333 | 0.000319 | **0.000339 $\pm$ 0.000011** | 8.64s |
-| **`st_gcn_lstm_sym`** (Symmetric) | 0.001630 | 0.001473 | 0.001618 | 0.001360 | 0.001364 | **0.001489 $\pm$ 0.000122** | 11.81s |
-| **`st_gcn_lstm_dir`** (Proposed) | 0.001270 | 0.001269 | 0.001249 | 0.001248 | 0.001156 | **0.001238 $\pm$ 0.000042** | 10.36s |
+| **`lstm`** (Temporal Baseline) | 0.000930 | 0.000929 | 0.000956 | 0.000958 | 0.000934 | **0.000941 $\pm$ 0.000014** | 370.4s |
+| **`paper_overall`** (ICCMC 2025) | 0.000256 | 0.000246 | 0.000248 | 0.000247 | 0.000247 | **0.000249 $\pm$ 0.000004** | 418.5s |
+| **`st_gcn_lstm_sym`** (Symmetric) | 0.000957 | 0.001421 | 0.001421 | 0.000958 | 0.000971 | **0.001145 $\pm$ 0.000252** *(all 5)*<br>*(converged 42/45/46: **0.000962 $\pm$ 0.000008**)* | 416.7s |
+| **`st_gcn_lstm_dir`** (Proposed) | 0.000905 | 0.000901 | 0.000904 | 0.000903 | 0.000906 | **0.000904 $\pm$ 0.000002** | 472.1s |
 
 ---
 
@@ -265,40 +265,40 @@ RESULT: ALL 37 CHECKED PHASE GATES PASSED! (33.6s total runtime)
 
 | Test Harness / Suite | File Location | Purpose & Scope | Status | Checks Passed |
 |---|---|---|---|---|
-| **Phase Gate 0** | `tests/test_phase0_setup.py` | Directory structure, imports, parser, ~5% null policy | ðŸŸ¢ **PASSED** | 5 / 5 |
-| **Setup Diagnostic** | `setup_and_download.py` | Full dataset profile (649,999 rows, sha256 checksum) | ðŸŸ¢ **PASSED** | 1 / 1 |
-| **Phase Gate 1** | `tests/test_phase1_eda.py` | ACF 1â€“50, within-segment correlation, horizon drop | ðŸŸ¢ **PASSED** | 4 / 4 |
-| **Notebook Audit** | `tests/audit_executed_notebook.py` | 15 notebook cells parsed, execution count check | ðŸŸ¢ **PASSED** | 1 / 1 |
-| **Challenge Oracle 1** | `tests/test_phase1_challenge_oracle.py` | Empirical audit on 647k rows ($R^2 \ge 0.99$ at 2m, $<0.99$ at 10m) | ðŸŸ¢ **PASSED** | 3 / 3 |
-| **Phase Gate 2** | `tests/test_phase2_dataset.py` | Monotonic sorting, gap segmentation, bounded ffill | ðŸŸ¢ **PASSED** | 4 / 4 |
-| **Adversarial Suite 1** | `tests/test_adversarial_phase2.py` | Injected 24h gaps, extreme null runs, retention | ðŸŸ¢ **PASSED** | 10 / 10 |
-| **Adversarial Suite 2** | `tests/test_adversarial_phase2_challenger2.py` | Strict window bounds, stride subsampling, scaler math | ðŸŸ¢ **PASSED** | 5 / 5 |
-| **Phase Gate 3** | `tests/test_phase3_models.py` | Zero-mock test: shapes `[B, 4]`/`[B]`, 2-hop grads, params | ðŸŸ¢ **PASSED** | 6 / 6 |
-| **Adversarial Suite 3** | `tests/test_adversarial_phase3_challenger1.py` | DAG nilpotency ($A^4=0$), graph ablation, batch scaling | ðŸŸ¢ **PASSED** | 8 / 8 |
-| **Phase Gate 4** | `tests/test_phase4_training.py` | Checkpoint resolution, loss routing, clipping, skip logic | ðŸŸ¢ **PASSED** | 7 / 7 |
-| **Adversarial Suite 4** | `tests/test_adversarial_phase4_challenger1.py` | Extreme inputs, missing dirs, parameter freeze | ðŸŸ¢ **PASSED** | 10 / 10 |
-| **Adversarial Suite 5** | `tests/test_adversarial_phase4_challenger2.py` | Seed reproducibility, gradient explosion clipping | ðŸŸ¢ **PASSED** | 11 / 11 |
-| **Phase Gate 5** | `tests/test_phase5_evaluation.py` | Reg metrics, batched predict, Ridge tuning, terciles, artifacts | ðŸŸ¢ **PASSED** | 5 / 5 |
-| **Adversarial Suite 6** | `tests/test_adversarial_phase5.py` | Skill score boundaries, confusion matrix conservation | ðŸŸ¢ **PASSED** | 4 / 4 |
-| **Phase Gate 6** | `tests/test_phase6_explainability.py` | Completeness axiom, $\Delta$-attribution, deletion test, narrative | ðŸŸ¢ **PASSED** | 6 / 6 |
-| **Master Smoke Test** | `tests/smoke_test.py` | End-to-end integration across entire pipeline | ðŸŸ¢ **PASSED** | 1 / 1 |
-| **Checkpoint Audit** | `scripts/verify_checkpoints.py` | 20 checkpoints loaded with `weights_only=True`, val loss verified | ðŸŸ¢ **PASSED** | 20 / 20 |
+| **Phase Gate 0** | `tests/test_phase0_setup.py` | Directory structure, imports, parser, ~5% null policy | 🟢 **PASSED** | 5 / 5 |
+| **Setup Diagnostic** | `setup_and_download.py` | Full dataset profile (649,999 rows, sha256 checksum) | 🟢 **PASSED** | 1 / 1 |
+| **Phase Gate 1** | `tests/test_phase1_eda.py` | ACF 1–50, within-segment correlation, horizon drop | 🟢 **PASSED** | 4 / 4 |
+| **Notebook Audit** | `tests/audit_executed_notebook.py` | 15 notebook cells parsed, execution count check | 🟢 **PASSED** | 1 / 1 |
+| **Challenge Oracle 1** | `tests/test_phase1_challenge_oracle.py` | Empirical audit on 647k rows ($R^2 \ge 0.99$ at 2m, $<0.99$ at 10m) | 🟢 **PASSED** | 3 / 3 |
+| **Phase Gate 2** | `tests/test_phase2_dataset.py` | Monotonic sorting, gap segmentation, bounded ffill | 🟢 **PASSED** | 4 / 4 |
+| **Adversarial Suite 1** | `tests/test_adversarial_phase2.py` | Injected 24h gaps, extreme null runs, retention | 🟢 **PASSED** | 10 / 10 |
+| **Adversarial Suite 2** | `tests/test_adversarial_phase2_challenger2.py` | Strict window bounds, stride subsampling, scaler math | 🟢 **PASSED** | 5 / 5 |
+| **Phase Gate 3** | `tests/test_phase3_models.py` | Zero-mock test: shapes `[B, 4]`/`[B]`, 2-hop grads, params | 🟢 **PASSED** | 6 / 6 |
+| **Adversarial Suite 3** | `tests/test_adversarial_phase3_challenger1.py` | DAG nilpotency ($A^4=0$), graph ablation, batch scaling | 🟢 **PASSED** | 8 / 8 |
+| **Phase Gate 4** | `tests/test_phase4_training.py` | Checkpoint resolution, loss routing, clipping, skip logic | 🟢 **PASSED** | 7 / 7 |
+| **Adversarial Suite 4** | `tests/test_adversarial_phase4_challenger1.py` | Extreme inputs, missing dirs, parameter freeze | 🟢 **PASSED** | 10 / 10 |
+| **Adversarial Suite 5** | `tests/test_adversarial_phase4_challenger2.py` | Seed reproducibility, gradient explosion clipping | 🟢 **PASSED** | 11 / 11 |
+| **Phase Gate 5** | `tests/test_phase5_evaluation.py` | Reg metrics, batched predict, Ridge tuning, terciles, artifacts | 🟢 **PASSED** | 5 / 5 |
+| **Adversarial Suite 6** | `tests/test_adversarial_phase5.py` | Skill score boundaries, confusion matrix conservation | 🟢 **PASSED** | 4 / 4 |
+| **Phase Gate 6** | `tests/test_phase6_explainability.py` | Completeness axiom, $\Delta$-attribution, deletion test, narrative | 🟢 **PASSED** | 6 / 6 |
+| **Master Smoke Test** | `tests/smoke_test.py` | End-to-end integration across entire pipeline | 🟢 **PASSED** | 1 / 1 |
+| **Checkpoint Audit** | `scripts/verify_checkpoints.py` | 20 checkpoints loaded with `weights_only=True`, val loss verified | 🟢 **PASSED** | 20 / 20 |
 
 ---
 
 ## 6. Viva Voce Defense Guide & Review Board FAQ
 
 ### Q1: Why did you reframe Research Question 2 (RQ2) rather than assuming topological graph propagation is strong?
-> **Answer:** Exploratory data analysis in Phase 1 revealed that Pearson cross-correlation between adjacent supply chain echelons is relatively weak ($0.04$ to $0.32$). Rather than making an unverified assertion that graph structure dominates, we reframed RQ2 as an empirical hypothesis test: *"Does graph convolution provide measurable predictive gain over a purely temporal LSTM?"* Phase 5 confirmed that it does (($0.000273$ vs. $0.000284$, beating the 1-std boundary), with the strongest benefit occurring at the Supplier tier (+20.0% skill gain).000749$ vs. ($0.000273$ vs. $0.000284$, beating the 1-std boundary), with the strongest benefit occurring at the Supplier tier (+20.0% skill gain).000719$, not beating the 1-std boundary), but provides strong node-level benefit at the Supplier tier (+21.8% skill gain).
+> **Answer:** Exploratory data analysis in Phase 1 revealed that Pearson cross-correlation between adjacent supply chain echelons is relatively weak ($0.04$ to $0.32$). Rather than making an unverified assertion that graph structure dominates, we reframed RQ2 as an empirical hypothesis test: *"Does graph convolution provide measurable predictive gain over a purely temporal LSTM?"* In Phase 5 the directed ST-GCN-LSTM had lower MSE than the LSTM ($0.000273$ vs. $0.000284$, a gap larger than the summed 1-std threshold), with the largest difference at the Supplier tier (+20.0 percentage points of skill). Because the two models also differ in architecture (shared per-node LSTM with echelon embeddings vs. one joint LSTM), we do not attribute this gain to graph structure alone; an identity-adjacency control was not run.
 
 ### Q2: Why is the naive persistence baseline so difficult to beat in this dataset?
 > **Answer:** Operational supply chain indices measured at high frequency exhibit high autocorrelation ($\rho_1 > 0.99$). At a 2-minute horizon ($H=1$), naive persistence achieves an $R^2 \approx 0.99$, making machine learning redundant. By empirical gating, we lengthened the horizon to 10 minutes ($H=5$), dropping persistence to $R^2 \approx 0.9613$ ($MSE = 0.000397$). This established an operationally meaningful forecast window where our directed GCN-LSTM achieved a 31.16% MSE reduction.
 
-### Q3: Why does `st_gcn_lstm_dir` beat `st_gcn_lstm_sym`?
-> **Answer:** Physical supply chains possess strict operational directionality: physical goods flow downstream ($S \to M \to D \to R$) while purchase orders and delay signals propagate upstream ($R \to D \to M \to S$). Symmetric graph convolution aggregates both directions using a single undirected matrix $\tilde{A}$, which blurs relational signal propagation. The directed architecture assigns separate learnable parameters ($W_{\text{down}}, W_{\text{up}}$), preserving directional flow.
+### Q3: Why does `st_gcn_lstm_dir` have lower error than `st_gcn_lstm_sym`?
+> **Answer:** The directed model's mean MSE is lower ($0.000273 \pm 0.000003$ vs. $0.000330 \pm 0.000061$), but the gap is within the summed seed std because two symmetric seeds collapsed, so it is not a significant difference by our 1-std rule. Our design motivation for the directed variant: Physical supply chains possess strict operational directionality: physical goods flow downstream ($S \to M \to D \to R$) while purchase orders and delay signals propagate upstream ($R \to D \to M \to S$). Symmetric graph convolution aggregates both directions using a single undirected matrix $\tilde{A}$, which blurs relational signal propagation. The directed architecture assigns separate learnable parameters ($W_{\text{down}}, W_{\text{up}}$), preserving directional flow.
 
 ### Q4: Why did seeds 43 and 44 collapse in the symmetric model?
-> **Answer:** The symmetric architecture has a flatter optimization landscape around the identity persistence solution ($\hat{y} = y_t$). For seeds 43 and 44, random weight initialization placed the network in a saddle point where gradient updates were insufficient to break symmetry before early stopping halted training. Rather than discarding these runs, we adopted Option A: we kept all 5 runs in the headline mean (0.001145) and reported the 3-seed converged mean (0.000962) separately.
+> **Answer:** For seeds 43 and 44 the symmetric model stopped at the persistence solution ($\hat{y} = y_t$; best val loss 0.001421, early-stopped after 17 and 11 epochs). The exact cause was not established (`scripts/diagnose_sym_collapse.py` is the diagnostic). Rather than discarding these runs, we adopted Option A: we kept all 5 runs in the headline mean (0.001145) and reported the 3-seed converged mean (0.000962) separately.
 
 ### Q5: Why is $\Delta$-attribution necessary for Integrated Gradients in this application?
 > **Answer:** When applying standard Integrated Gradients to autoregressive time-series, $>80\%$ of attribution is assigned to the target node's own latest observation ($x[-1, c]$) because persistence is the dominant carrier signal. $\Delta$-attribution defines $g(x) = f(x)[:, c] - x[-1, c]$, subtracting the static persistence baseline. This forces Integrated Gradients to explain the exact dynamic adjustment added by the neural network's spatio-temporal layers.
@@ -312,85 +312,85 @@ RESULT: ALL 37 CHECKED PHASE GATES PASSED! (33.6s total runtime)
 
 ```
 Supply_chain_alret_system/
-â”œâ”€â”€ docs/
-â”‚   â”œâ”€â”€ MASTER_TECHSTACK.md          # Consolidated master tech stack
-â”‚   â”œâ”€â”€ PLAN_A_IMPLEMENTATION_PLAN.md# Core Plan A roadmap (Phases 0-8)
-â”‚   â”œâ”€â”€ PHASE_0.md                   # Phase 0 verification report
-â”‚   â”œâ”€â”€ PHASE_1.md                   # Phase 1 EDA & empirical findings report
-â”‚   â”œâ”€â”€ PHASE_2.md                   # Phase 2 pipeline hardening report
-â”‚   â”œâ”€â”€ PHASE_3.md                   # Phase 3 model architecture report
-â”‚   â”œâ”€â”€ PHASE_4.md                   # Phase 4 training & empirical results report
-â”‚   â”œâ”€â”€ PHASE_5.md                   # Phase 5 evaluation & statistical benchmarking report
-â”‚   â”œâ”€â”€ PHASE_6.md                   # Phase 6 explainability & deletion validation report
-â”‚   â”œâ”€â”€ PHASE_7_FRONTEND_CONTEXT_AND_STREAMLIT_DECISION.md # Phase 7 ADR & Handoff
-â”‚   â””â”€â”€ PROJECT_PROGRESS_AND_EVALUATION_REPORT.md # Master progress report (Mirror)
-â”œâ”€â”€ data/raw/
-â”‚   â””â”€â”€ SCRM_timeSeries_2018_train.csv # 35.7 MB verified raw dataset (649,999 rows)
-â”œâ”€â”€ outputs/
-â”‚   â”œâ”€â”€ models/
-â”‚   â”‚   â”œâ”€â”€ checkpoints.sha256       # Cryptographic SHA-256 manifest
-â”‚   â”‚   â”œâ”€â”€ scaler.joblib            # Fitted train-partition MinMaxScaler
-â”‚   â”‚   â”œâ”€â”€ lstm_seed{42..46}.pt     # 5 trained LSTM checkpoints
-â”‚   â”‚   â”œâ”€â”€ paper_overall_seed{42..46}.pt # 5 trained Paper Hybrid checkpoints
-â”‚   â”‚   â”œâ”€â”€ st_gcn_lstm_sym_seed{42..46}.pt # 5 trained Symmetric STGCN checkpoints
-â”‚   â”‚   â””â”€â”€ st_gcn_lstm_dir_seed{42..46}.pt # 5 trained Directed STGCN checkpoints
-â”‚   â”œâ”€â”€ figures/
-â”‚   â”‚   â”œâ”€â”€ eval_overall_comparison.png     # Benchmark bar chart across models
-â”‚   â”‚   â”œâ”€â”€ eval_node_skill_scores.png      # Echelon skill scores vs. persistence
-â”‚   â”‚   â”œâ”€â”€ eval_severity_confusion_matrix.png # 3-class tercile confusion matrix
-â”‚   â”‚   â””â”€â”€ eval_r2_delta_comparison.png    # Variance explained on delta-y
-â”‚   â””â”€â”€ results/
-â”‚       â”œâ”€â”€ param_counts.csv         # Verified parameter counts across 4 models
-â”‚       â”œâ”€â”€ training_summary.csv     # 20-run training loss & wall-clock metrics
-â”‚       â”œâ”€â”€ overall_metrics.csv      # Test set evaluation summary across 6 models
-â”‚       â”œâ”€â”€ node_metrics.csv         # Per-echelon skill scores and R2 delta-y
-â”‚       â”œâ”€â”€ severity_metrics.csv     # 3-tier severity classification metrics
-â”‚       â”œâ”€â”€ confusion_matrix.csv     # 3x3 operational alert confusion matrix
-â”‚       â”œâ”€â”€ attribution_examples.csv # 10-window explainability & deletion benchmark
-â”‚       â””â”€â”€ {model}_seed{seed}_loss.csv # 20 per-run loss history files (685 epochs)
-â”œâ”€â”€ src/
-â”‚   â”œâ”€â”€ __init__.py
-â”‚   â”œâ”€â”€ config.py                    # Centralized hyperparameter configuration
-â”‚   â”œâ”€â”€ dataset.py                   # Hardened segmentation & windowing pipeline
-â”‚   â”œâ”€â”€ graph_builder.py             # Supply chain adjacency & renormalised matrices
-â”‚   â”œâ”€â”€ explainability.py            # Integrated Gradients & Delta-attribution
-â”‚   â””â”€â”€ models/
-â”‚       â”œâ”€â”€ __init__.py              # Clean package-level model exports
-â”‚       â”œâ”€â”€ graph_layers.py          # Hand-written directed & symmetric GraphConv
-â”‚       â””â”€â”€ st_gcn_lstm.py           # Core STGCNLSTM, PaperHybridOverall, LSTMBaseline
-â”œâ”€â”€ tests/
-â”‚   â”œâ”€â”€ run_phase_tests.py           # Master CLI progressive test runner
-â”‚   â”œâ”€â”€ smoke_test.py                # End-to-end regression test
-â”‚   â”œâ”€â”€ test_phase0_setup.py         # Gate 0 test suite
-â”‚   â”œâ”€â”€ test_phase1_eda.py           # Gate 1 test suite
-â”‚   â”œâ”€â”€ test_phase2_dataset.py       # Gate 2 test suite
-â”‚   â”œâ”€â”€ test_phase3_models.py        # Gate 3 test suite (Zero-mock refactored)
-â”‚   â”œâ”€â”€ test_phase4_training.py      # Gate 4 test suite (7 checks passed)
-â”‚   â”œâ”€â”€ test_phase5_evaluation.py    # Gate 5 test suite (5 checks passed)
-â”‚   â”œâ”€â”€ test_phase6_explainability.py# Gate 6 test suite (6 checks passed)
-â”‚   â”œâ”€â”€ test_phase7_app.py           # Gate 7 test suite (Ready for Phase 7)
-â”‚   â”œâ”€â”€ test_phase8_e2e.py           # Gate 8 test suite (Ready for Phase 8)
-â”‚   â”œâ”€â”€ test_adversarial_phase2.py   # Adversarial data pipeline stress test
-â”‚   â”œâ”€â”€ test_adversarial_phase2_challenger2.py # Adversarial window bounds test
-â”‚   â”œâ”€â”€ test_adversarial_phase3_challenger1.py # Adversarial graph & model test
-â”‚   â”œâ”€â”€ test_adversarial_phase4_challenger1.py # Adversarial training pipeline test
-â”‚   â”œâ”€â”€ test_adversarial_phase4_challenger2.py # Adversarial seed & clipping test
-â”‚   â””â”€â”€ test_adversarial_phase5.py   # Adversarial evaluation metrics test
-â”œâ”€â”€ notebooks/
-â”‚   â”œâ”€â”€ 01_EDA.ipynb                 # Fully executed Phase 1 EDA notebook
-â”‚   â””â”€â”€ colab_train.ipynb            # Verified Colab GPU training notebook
-â”œâ”€â”€ scripts/
-â”‚   â”œâ”€â”€ count_parameters.py          # Parameter accounting utility script
-â”‚   â”œâ”€â”€ verify_checkpoints.py        # 20-checkpoint strict bitwise & validation loss audit
-â”‚   â”œâ”€â”€ diagnose_sym_collapse.py     # Diagnostic script for symmetric graph collapse
-â”‚   â””â”€â”€ generate_attributions.py     # Attribution generation & deletion test runner
-â”œâ”€â”€ training/
-â”‚   â”œâ”€â”€ train.py                     # Production multi-model multi-seed training engine
-â”‚   â””â”€â”€ evaluate.py                  # Production test evaluation & baseline benchmark
-â”œâ”€â”€ AGENTS.md                        # AI coding agent guard rails and rules
-â”œâ”€â”€ requirements.txt                 # Project dependencies
-â”œâ”€â”€ requirements.lock                # Pinned environment versions (clean UTF-8)
-â””â”€â”€ setup_and_download.py            # Automated download & validation script
+├── docs/
+│   ├── MASTER_TECHSTACK.md          # Consolidated master tech stack
+│   ├── PLAN_A_IMPLEMENTATION_PLAN.md# Core Plan A roadmap (Phases 0-8)
+│   ├── PHASE_0.md                   # Phase 0 verification report
+│   ├── PHASE_1.md                   # Phase 1 EDA & empirical findings report
+│   ├── PHASE_2.md                   # Phase 2 pipeline hardening report
+│   ├── PHASE_3.md                   # Phase 3 model architecture report
+│   ├── PHASE_4.md                   # Phase 4 training & empirical results report
+│   ├── PHASE_5.md                   # Phase 5 evaluation & statistical benchmarking report
+│   ├── PHASE_6.md                   # Phase 6 explainability & deletion validation report
+│   ├── PHASE_7_FRONTEND_CONTEXT_AND_STREAMLIT_DECISION.md # Phase 7 ADR & Handoff
+│   └── PROJECT_PROGRESS_AND_EVALUATION_REPORT.md # Master progress report (Mirror)
+├── data/raw/
+│   └── SCRM_timeSeries_2018_train.csv # 35.7 MB verified raw dataset (649,999 rows)
+├── outputs/
+│   ├── models/
+│   │   ├── checkpoints.sha256       # Cryptographic SHA-256 manifest
+│   │   ├── scaler.joblib            # Fitted train-partition MinMaxScaler
+│   │   ├── lstm_seed{42..46}.pt     # 5 trained LSTM checkpoints
+│   │   ├── paper_overall_seed{42..46}.pt # 5 trained Paper Hybrid checkpoints
+│   │   ├── st_gcn_lstm_sym_seed{42..46}.pt # 5 trained Symmetric STGCN checkpoints
+│   │   └── st_gcn_lstm_dir_seed{42..46}.pt # 5 trained Directed STGCN checkpoints
+│   ├── figures/
+│   │   ├── eval_overall_comparison.png     # Benchmark bar chart across models
+│   │   ├── eval_node_skill_scores.png      # Echelon skill scores vs. persistence
+│   │   ├── eval_severity_confusion_matrix.png # 3-class tercile confusion matrix
+│   │   └── eval_r2_delta_comparison.png    # Variance explained on delta-y
+│   └── results/
+│       ├── param_counts.csv         # Verified parameter counts across 4 models
+│       ├── training_summary.csv     # 20-run training loss & wall-clock metrics
+│       ├── overall_metrics.csv      # Test set evaluation summary across 6 models
+│       ├── node_metrics.csv         # Per-echelon skill scores and R2 delta-y
+│       ├── severity_metrics.csv     # 3-tier severity classification metrics
+│       ├── confusion_matrix.csv     # 3x3 operational alert confusion matrix
+│       ├── attribution_examples.csv # 10-window explainability & deletion benchmark
+│       └── {model}_seed{seed}_loss.csv # 20 per-run loss history files (685 epochs)
+├── src/
+│   ├── __init__.py
+│   ├── config.py                    # Centralized hyperparameter configuration
+│   ├── dataset.py                   # Hardened segmentation & windowing pipeline
+│   ├── graph_builder.py             # Supply chain adjacency & renormalised matrices
+│   ├── explainability.py            # Integrated Gradients & Delta-attribution
+│   └── models/
+│       ├── __init__.py              # Clean package-level model exports
+│       ├── graph_layers.py          # Hand-written directed & symmetric GraphConv
+│       └── st_gcn_lstm.py           # Core STGCNLSTM, PaperHybridOverall, LSTMBaseline
+├── tests/
+│   ├── run_phase_tests.py           # Master CLI progressive test runner
+│   ├── smoke_test.py                # End-to-end regression test
+│   ├── test_phase0_setup.py         # Gate 0 test suite
+│   ├── test_phase1_eda.py           # Gate 1 test suite
+│   ├── test_phase2_dataset.py       # Gate 2 test suite
+│   ├── test_phase3_models.py        # Gate 3 test suite (Zero-mock refactored)
+│   ├── test_phase4_training.py      # Gate 4 test suite (7 checks passed)
+│   ├── test_phase5_evaluation.py    # Gate 5 test suite (5 checks passed)
+│   ├── test_phase6_explainability.py# Gate 6 test suite (6 checks passed)
+│   ├── test_phase7_app.py           # Gate 7 test suite (Ready for Phase 7)
+│   ├── test_phase8_e2e.py           # Gate 8 test suite (Ready for Phase 8)
+│   ├── test_adversarial_phase2.py   # Adversarial data pipeline stress test
+│   ├── test_adversarial_phase2_challenger2.py # Adversarial window bounds test
+│   ├── test_adversarial_phase3_challenger1.py # Adversarial graph & model test
+│   ├── test_adversarial_phase4_challenger1.py # Adversarial training pipeline test
+│   ├── test_adversarial_phase4_challenger2.py # Adversarial seed & clipping test
+│   └── test_adversarial_phase5.py   # Adversarial evaluation metrics test
+├── notebooks/
+│   ├── 01_EDA.ipynb                 # Fully executed Phase 1 EDA notebook
+│   └── colab_train.ipynb            # Verified Colab GPU training notebook
+├── scripts/
+│   ├── count_parameters.py          # Parameter accounting utility script
+│   ├── verify_checkpoints.py        # 20-checkpoint strict bitwise & validation loss audit
+│   ├── diagnose_sym_collapse.py     # Diagnostic script for symmetric graph collapse
+│   └── generate_attributions.py     # Attribution generation & deletion test runner
+├── training/
+│   ├── train.py                     # Production multi-model multi-seed training engine
+│   └── evaluate.py                  # Production test evaluation & baseline benchmark
+├── AGENTS.md                        # AI coding agent guard rails and rules
+├── requirements.txt                 # Project dependencies
+├── requirements.lock                # Pinned environment versions (clean UTF-8)
+└── setup_and_download.py            # Automated download & validation script
 ```
 
 ---
@@ -429,4 +429,4 @@ With Phase 0 through Phase 6 completed, verified, and pushed, the project transi
 
 ## 10. Summary Conclusion & Project Readiness Verdict
 
-> **Evaluation Board Verdict:** The SupplyGuard project stands at **77.8% overall completion (7 of 9 phases complete)**, executing strictly ahead of schedule. The scientific, mathematical, and algorithmic foundation â€” data engineering, directed spatiotemporal graph modeling, cloud GPU training, multi-seed statistical evaluation, and axiomatic gradient explainability â€” is fully implemented, verified, and frozen. All 7 completed phases have passed their automated gate criteria with zero regressions across **130+ formal tests and validation checks**. The repository is 100% prepared to begin **Phase 7 (SupplyGuard Dashboard)**.
+> **Evaluation Board Verdict:** The SupplyGuard project stands at **77.8% overall completion (7 of 9 phases complete)** at this snapshot. The scientific, mathematical, and algorithmic foundation — data engineering, directed spatiotemporal graph modeling, cloud GPU training, multi-seed statistical evaluation, and axiomatic gradient explainability — is fully implemented, verified, and frozen. All 7 completed phases have passed their automated gate criteria with zero regressions across **130+ formal tests and validation checks**. The repository is 100% prepared to begin **Phase 7 (SupplyGuard Dashboard)**.
