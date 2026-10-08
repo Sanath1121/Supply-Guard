@@ -16,7 +16,7 @@ from app.ui.canvas import render_topology_svg
 from app.ui.plotly_theme import apply_theme, SERIES_COLORS
 from app.utils.artifacts import ArtifactStatus, get_tiers, get_scaler, predict_window
 from app.utils.explain_service import compute_all_edge_shares
-from app.utils.formatters import compute_tercile_tier, get_tier_color
+from app.utils.formatters import compute_tercile_tier, get_tier_color, node_tier
 
 
 def render_monitor(
@@ -40,11 +40,34 @@ def render_monitor(
         return
 
     # 1. Replay Controls (Single source of truth)
+    # window_idx (0-based) drives the page; slider_win_idx (1-based) is the slider's own state.
+    # Buttons change both in on_click callbacks, which run before the rerun, so the slider
+    # cannot hand back its old value and undo the button.
     total_windows = len(windows)
     if "window_idx" not in st.session_state or st.session_state["window_idx"] >= total_windows:
         st.session_state["window_idx"] = 0
+    if st.session_state.get("slider_win_idx") != st.session_state["window_idx"] + 1:
+        st.session_state["slider_win_idx"] = st.session_state["window_idx"] + 1
 
     cur_idx = st.session_state["window_idx"]
+
+    def _go_to(i: int):
+        i = int(min(max(i, 0), total_windows - 1))
+        st.session_state["window_idx"] = i
+        st.session_state["slider_win_idx"] = i + 1
+
+    def _from_slider():
+        _go_to(st.session_state["slider_win_idx"] - 1)
+
+    def _jump_to_peak():
+        # Scan about 100 evenly spaced loaded windows and pick the highest mean forecast (TRI)
+        best_idx, best_val = 0, -1.0
+        step_stride = 1 if len(windows) <= 100 else max(1, len(windows) // 100)
+        for i_w in range(0, len(windows), step_stride):
+            tri_score = float(np.mean(predict_window(model, windows[i_w]["sequence"])))
+            if tri_score > best_val:
+                best_val, best_idx = tri_score, i_w
+        _go_to(best_idx)
 
     # Replay Control Deck UI
     st.html(clean_html(f"""
@@ -65,47 +88,32 @@ def render_monitor(
     ctl_col1, ctl_col2, ctl_col3, ctl_col4 = st.columns([1, 8, 1, 2.5], vertical_alignment="center")
 
     with ctl_col1:
-        if st.button("◀", key="prev_win_btn", disabled=(cur_idx <= 0), use_container_width=True, help="Previous window (t-1)"):
-            st.session_state["window_idx"] = max(0, cur_idx - 1)
-            st.rerun()
+        st.button("◀", key="prev_win_btn", disabled=(cur_idx <= 0), use_container_width=True,
+                  on_click=_go_to, args=(cur_idx - 1,),
+                  help="Previous loaded window (500 evenly spaced test windows are loaded, so each step skips about 116 test windows)")
 
     with ctl_col2:
         if total_windows > 1:
-            new_idx = st.slider(
+            st.slider(
                 "Replay Control (Window Scrub)",
-                min_value=0,
-                max_value=total_windows - 1,
-                value=cur_idx,
+                min_value=1,
+                max_value=total_windows,
                 format="Window #%d",
                 label_visibility="collapsed",
-                key="slider_win_idx"
+                key="slider_win_idx",
+                on_change=_from_slider,
             )
-            if new_idx != cur_idx:
-                st.session_state["window_idx"] = new_idx
-                st.rerun()
         else:
             st.caption("Single window loaded (#1)")
 
     with ctl_col3:
-        if st.button("▶", key="next_win_btn", disabled=(cur_idx >= total_windows - 1), use_container_width=True, help="Next window (t+1)"):
-            st.session_state["window_idx"] = min(total_windows - 1, cur_idx + 1)
-            st.rerun()
+        st.button("▶", key="next_win_btn", disabled=(cur_idx >= total_windows - 1), use_container_width=True,
+                  on_click=_go_to, args=(cur_idx + 1,),
+                  help="Next loaded window (500 evenly spaced test windows are loaded, so each step skips about 116 test windows)")
 
     with ctl_col4:
-        if st.button("⚡ Jump to Peak TRI", key="jump_peak_btn", help="Find and jump to the test window with the highest predicted Total Risk Index", use_container_width=True):
-            best_idx = 0
-            best_val = -1.0
-            # Sample windows if too many to ensure instantaneous response
-            step_stride = 1 if len(windows) <= 100 else max(1, len(windows) // 100)
-            with st.spinner("Locating peak risk window..."):
-                for i_w in range(0, len(windows), step_stride):
-                    p_out = predict_window(model, windows[i_w]["sequence"])
-                    tri_score = float(np.mean(p_out))
-                    if tri_score > best_val:
-                        best_val = tri_score
-                        best_idx = i_w
-            st.session_state["window_idx"] = best_idx
-            st.rerun()
+        st.button("⚡ Jump to Peak TRI", key="jump_peak_btn", use_container_width=True, on_click=_jump_to_peak,
+                  help="Find and jump to the loaded test window with the highest predicted Total Risk Index")
 
     current_window = windows[st.session_state["window_idx"]]
     w_id = current_window["window_id"]
@@ -211,7 +219,7 @@ def render_monitor(
             for i, name in enumerate(Config.NODE_NAMES):
                 with e_cols[i]:
                     r_val = float(preds[i])
-                    e_tier = compute_tercile_tier(r_val, p33, p66)
+                    e_tier = node_tier(r_val, i, tiers)
                     last_step = float(seq[-1, i])
                     e_delta = r_val - last_step
                     icon = echelon_icons[i]
@@ -246,7 +254,7 @@ def render_monitor(
     st.html("<div style='height: 20px;'></div>")
 
     # 4. Tabs: [ Cascading Network Topology ] and [ Spatiotemporal Trajectories ]
-    tab_topo, tab_traj = st.tabs(["Cascading Network Topology", "Spatiotemporal Trajectories"])
+    tab_topo, tab_traj = st.tabs(["Network Topology", "Spatiotemporal Trajectories"])
 
     with tab_topo:
         if is_scalar_model:
@@ -254,7 +262,7 @@ def render_monitor(
         else:
             st.html(
                 "<div style='font-size: 0.8125rem; color: var(--text-3); margin-bottom: 10px;'>"
-                "Animated edge glow and thickness reflect Integrated Gradients attribution share from upstream tiers. Node pods indicate calibrated severity."
+                "Animated edge glow and thickness reflect Integrated Gradients attribution share from upstream tiers. Node pods show each echelon's severity tier (its own training terciles); the highlighted node has the highest predicted risk, which is not proof of where a disruption started."
                 "</div>"
             )
             model_key = f"{status.model_name}:{status.graph_mode}:{status.seed}"

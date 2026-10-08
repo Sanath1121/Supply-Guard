@@ -121,6 +121,23 @@ def get_tiers() -> Dict[str, Any]:
         except Exception:
             pass
 
+    # Same definition as training/evaluate.py: per-node terciles of the TRAIN targets
+    # (p33/p66 for the mean risk index are the terciles of the train node-mean).
+    if os.path.exists(Config.RAW_DATA_PATH):
+        try:
+            from src.dataset import build_datasets
+            tr, _, _, _, _ = build_datasets(Config(), save_scaler=False)
+            node_targets = tr.node_targets.numpy()
+            lo, hi = np.quantile(node_targets, [1 / 3, 2 / 3], axis=0)
+            tri_lo, tri_hi = np.quantile(node_targets.mean(axis=1), [1 / 3, 2 / 3])
+            return {
+                "p33": float(tri_lo), "p66": float(tri_hi),
+                "node_p33": [float(v) for v in lo], "node_p66": [float(v) for v in hi],
+                "source": "train_terciles",
+            }
+        except Exception:
+            pass
+
     return {"p33": 0.35, "p66": 0.65, "source": "provisional_default"}
 
 

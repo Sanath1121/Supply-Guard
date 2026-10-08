@@ -23,6 +23,9 @@ scratch/
 !outputs/results/severity_metrics.csv
 !outputs/results/confusion_matrix.csv
 !outputs/figures/*.png
+# Sandbox demo inputs (~700 B each, 10 real test-partition rows in raw units) referenced by sandbox_demo/README.md;
+# regenerable with `python -m scripts.make_sandbox_demo`, but only when the raw dataset is present.
+!sandbox_demo/*.csv
 
 # Python / Virtual Environments / Caches
 .venv/

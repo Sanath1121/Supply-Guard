@@ -2,13 +2,13 @@
 
 Renders an enterprise-grade, accessible, responsive SVG representation of the 4-echelon supply chain:
 Supplier -> Manufacturer -> Distributor -> Retailer.
-Features unique anti-gravity floating animations, delayed critical-node disruption shockwaves (1.0s delay),
+Features unique anti-gravity floating animations, a delayed highlight on the highest-risk node (1.0s delay),
 zero numerical clutter, and spatiotemporal risk cascade visual telemetry.
 100% offline-safe, zero external CDNs, fully WCAG AA compliant.
 """
 from typing import Dict, Any, Optional, Tuple
 import html
-from app.utils.formatters import get_tier_color, compute_tercile_tier
+from app.utils.formatters import get_tier_color, node_tier
 from app.ui.components import clean_html
 
 
@@ -25,15 +25,12 @@ def render_topology_svg(
         ("Distributor", 605, 120, "🚚", "Logistics & Freight"),
         ("Retailer", 845, 120, "🏪", "Point of Sale")
     ]
-    p33 = tiers.get("p33", 0.35)
-    p66 = tiers.get("p66", 0.65)
-
     # Calculate tiers and colors for each node
     node_data = {}
     aria_parts = []
-    for name, x, y, icon, desc in echelons:
+    for node_idx, (name, x, y, icon, desc) in enumerate(echelons):
         r_val = float(node_risks.get(name, 0.0))
-        t_tier = compute_tercile_tier(r_val, p33, p66)
+        t_tier = node_tier(r_val, node_idx, tiers)
         color = get_tier_color(t_tier)
         node_data[name] = {
             "risk": r_val,
@@ -48,8 +45,14 @@ def render_topology_svg(
 
     aria_label = html.escape(f"Supply chain network topology: {' -> '.join(aria_parts)}")
 
-    # Identify the critical node causing the issue (highest predicted risk)
-    critical_node = max(node_data.keys(), key=lambda k: node_data[k]["risk"])
+    # Highlight the High-tier node furthest above its own upper tercile. This marks the highest
+    # predicted risk only; it does not identify where a disruption originated.
+    def _margin(k):
+        i = [e[0] for e in echelons].index(k)
+        hi = tiers["node_p66"][i] if "node_p66" in tiers else tiers.get("p66", 0.65)
+        return node_data[k]["risk"] - hi
+    high_nodes = [k for k in node_data if node_data[k]["tier"] == "High"]
+    critical_node = max(high_nodes, key=_margin) if high_nodes else None
 
     # Edges definition with smooth cubic Bézier flow paths
     edges = [
@@ -81,7 +84,7 @@ def render_topology_svg(
         if share_val is not None and share_val > 0.05:
             stroke_width = max(3.0, min(8.0, 3.0 + share_val * 6.0))
             if is_critical_outflow:
-                flow_label = "CASCADE ▶"
+                flow_label = "FLOW ▶"
                 stroke_color = "#EF4444"
                 glow_color = "rgba(239, 68, 68, 0.35)"
                 line_cls = "sg-flow-line sg-cascade-edge"
@@ -115,12 +118,13 @@ def render_topology_svg(
         <circle cx="{x2}" cy="{y2}" r="4" fill="#030712" stroke="{stroke_color}" stroke-width="2" />
 
         <!-- Attribution Flow Pill Badge (NO numbers) -->
-        <g transform="translate({mid_x}, {mid_y})" class="sg-float-pill-{edge_idx}">
+        <!-- Outer group positions; inner group animates (a CSS transform would replace the translate) -->
+        <g transform="translate({mid_x}, {mid_y})"><g class="sg-float-pill-{edge_idx}">
             <rect x="-38" y="-12" width="76" height="24" rx="12" fill="rgba(15, 23, 42, 0.95)" stroke="{pill_border}" stroke-width="1" />
             <text x="0" y="4" fill="#F8FAFC" font-size="10" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle" letter-spacing="0.05em">
                 {flow_label}
             </text>
-        </g>
+        </g></g>
         """)
 
     # Nodes SVG
@@ -131,18 +135,18 @@ def render_topology_svg(
         c = info["color"]
         tier = info["tier"]
         icon = info["icon"]
-        is_culprit = (name == critical_node)
+        is_highest = (name == critical_node)
 
         # Center state label (ZERO numbers)
-        if is_culprit:
-            center_label = "DISRUPTED"
-            badge_label = "● CULPRIT"
+        if is_highest:
+            center_label = "HIGH RISK"
+            badge_label = "● HIGHEST"
             center_color = "#EF4444"
             badge_bg = "rgba(239, 68, 68, 0.22)"
             badge_border = "rgba(239, 68, 68, 0.8)"
             badge_text_color = "#EF4444"
         elif tier == "High":
-            center_label = "IMPACTED"
+            center_label = "HIGH"
             badge_label = "● HIGH RISK"
             center_color = "#EF4444"
             badge_bg = f"{c}22"
@@ -157,7 +161,7 @@ def render_topology_svg(
             badge_text_color = c
         else:
             center_label = "NOMINAL"
-            badge_label = "● OPTIMAL"
+            badge_label = "● LOW"
             center_color = "#10B981"
             badge_bg = f"{c}22"
             badge_border = f"{c}66"
@@ -169,7 +173,7 @@ def render_topology_svg(
         node_extra_class = f"sg-node-{node_idx}"
         outer_rect_class = ""
 
-        if is_culprit:
+        if is_highest:
             outer_rect_class = "sg-critical-glow"
             disruption_shockwaves = f"""
             <!-- Disruption Shockwave Rings (Delayed 1.0s) -->
@@ -178,15 +182,15 @@ def render_topology_svg(
             """
             disruption_beacon = f"""
             <!-- Disruption Warning Beacon (Delayed 1.0s) -->
-            <g transform="translate({x}, {y-68})" class="sg-disrupt-beacon">
+            <g transform="translate({x}, {y-68})"><g class="sg-disrupt-beacon">
                 <rect x="-54" y="-11" width="108" height="22" rx="11" fill="rgba(239, 68, 68, 0.95)" stroke="#FFFFFF" stroke-width="1" />
                 <text x="0" y="4" fill="#FFFFFF" font-size="10" font-weight="800" text-anchor="middle" letter-spacing="0.06em">
-                    ⚡ SHOCK ORIGIN
+                    ⚡ HIGHEST RISK
                 </text>
-            </g>
+            </g></g>
             """
             center_text_markup = f"""
-            <!-- State Designation (Transitions from MONITORED to DISRUPTED at 1.0s) -->
+            <!-- State Designation (Transitions from MONITORED to HIGH RISK at 1.0s) -->
             <text x="{x}" y="{y+10}" fill="#94A3B8" font-size="15" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle" letter-spacing="0.08em" class="sg-pre-disrupt-text">
                 MONITORED
             </text>
@@ -388,7 +392,7 @@ def render_topology_svg(
                     transform-origin: center;
                 }}
 
-                /* Text Transition: MONITORED fades out at 1.0s, DISRUPTED fades in at 1.0s */
+                /* Text Transition: MONITORED fades out at 1.0s, HIGH RISK fades in at 1.0s */
                 @keyframes sg-fade-out {{
                     0% {{ opacity: 1; }}
                     100% {{ opacity: 0; visibility: hidden; }}

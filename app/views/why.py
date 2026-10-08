@@ -1,7 +1,7 @@
 """SupplyGuard Explainability & Sensitivity View (Why This Forecast).
 
 Provides Integrated Gradients attributions, Delta-vs-persistence decomposition,
-temporal saliency profiles, mathematical completeness auditing, and model counterfactual sensitivity tests.
+per-time-step attribution, a completeness check, and a feature deletion test.
 Frames all outputs strictly as axiomatic sensitivity attributions.
 """
 from typing import Dict, Any, List, Optional
@@ -24,8 +24,8 @@ def render_why(
 ):
     """Render the Explainability view."""
     section_header(
-        "Explainable AI (XAI) Sensitivity & Diagnostic Suite",
-        "Path-integrated gradients, delta-attribution decomposition, and counterfactual sensitivity auditing."
+        "Explainable AI (XAI): Integrated Gradients",
+        "Which past inputs each forecast is most sensitive to, with a completeness check and a deletion test. Attributions show sensitivity, not cause."
     )
 
     if not windows or len(windows) == 0:
@@ -91,24 +91,13 @@ def render_why(
     # 1. Plain-English Dynamic Narrative & Action Directive
     narration_text = narrate(res, seq_len=Config.SEQ_LEN)
     
-    # Echelon-specific action protocol recommendations
-    action_protocols = {
-        "Supplier": "🚨 <strong>Vendor Action:</strong> Engage tier-1 vendor rep; trigger alternate raw material dispatch line; inspect transport pipeline.",
-        "Manufacturer": "⚙️ <strong>Plant Action:</strong> Rebalance assembly line batch scheduling; verify buffer inventory; stage secondary components.",
-        "Distributor": "🚚 <strong>Logistics Action:</strong> Reroute regional freight corridors; alert distribution cross-docks; audit transit delays.",
-        "Retailer": "🏪 <strong>Fulfillment Action:</strong> Reallocate regional safety stock to high-demand nodes; throttle backorder commitments."
-    }
-    action_text = action_protocols.get(NODE_NAMES[target_idx], "Review buffer thresholds and monitor upstream telemetry.")
 
     narrative_html = f"""
     <div style="font-size: 0.9375rem; line-height: 1.65; color: var(--text);">
         {escape(narration_text)}
     </div>
-    <div style="margin-top: 12px; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border-left: 3px solid var(--accent); border-radius: 4px; font-size: 0.8125rem; color: var(--text-2);">
-        {action_text}
-    </div>
     <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-3); padding-top: 4px;">
-        <em>Axiomatic Attribution:</em> Path-integrated gradients quantify model input saliency relative to calibrated baseline conditions.
+        <em>Integrated Gradients</em> (64 steps) measures the forecast's sensitivity to each input relative to a training-mean baseline. It does not establish cause.
     </div>
     """
     st.html(card(f"AI Diagnostic Narrative: {NODE_NAMES[target_idx]}", narrative_html))
@@ -153,7 +142,7 @@ def render_why(
             hovertemplate="<b>Step %{x}</b><br>Saliency Share: %{y:.1%}<extra></extra>"
         ))
         fig_time.update_layout(
-            title="Temporal Saliency Profile (Window Attention)",
+            title="Attribution by Time Step",
             xaxis_title="Lookback Time Step Across Window",
             yaxis_title="Normalized Share of Attribution",
             margin=dict(l=10, r=10, t=35, b=25)
@@ -183,7 +172,7 @@ def render_why(
             </div>
             <div style="font-size: 0.75rem; color: var(--text-3); margin-top: 6px; line-height: 1.5;">
                 Condition: <span class="mono-val">|&sum; attr - (f(x) - f(x0))| &le; 1e-2</span>.
-                A small gap guarantees that the attribution scores account for 100% of the model's prediction delta.
+                A small gap means the attributions add up to the change in the model's output from the baseline.
             </div>
         </div>
         """
@@ -192,7 +181,7 @@ def render_why(
     with del_col:
         top_feat_idx = int(np.argmax(res["feature_importance"]))
         neutralize_idx = st.selectbox(
-            "Feature to Neutralize (Counterfactual Test)",
+            "Feature to Remove (Deletion Test)",
             options=list(range(len(FEATURE_NAMES))),
             format_func=lambda i: f"{FEATURE_NAMES[i]} ({res['feature_importance'][i]:.0%} share)",
             index=top_feat_idx,
@@ -207,7 +196,7 @@ def render_why(
         del_html = f"""
         <div>
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
-                <span style="font-size: 0.8125rem; color: var(--text-2);">Counterfactual Risk Shift:</span>
+                <span style="font-size: 0.8125rem; color: var(--text-2);">Forecast Change:</span>
                 <span style="font-size: 1.125rem; font-weight: 700; color: {'var(--bad)' if d_val > 0 else 'var(--ok)'};" class="mono-val">
                     {'▲ +' if d_val > 0 else '▼ '}{d_val:.4f}
                 </span>
@@ -216,18 +205,9 @@ def render_why(
                 {orig_r:.3f} &rarr; {mod_r:.3f}
             </div>
             <div style="font-size: 0.75rem; color: var(--text-3); margin-top: 6px;">
-                Neutralized <span class="mono-val">{escape(del_res['feature_name'])}</span> across all 10 lookback steps using baseline value. 
-                Computed via live model inference pass without fabricated multipliers.
+                Set <span class="mono-val">{escape(del_res['feature_name'])}</span> to 0 (scaled minimum) across all 10 lookback steps
+                and re-ran the model.
             </div>
         </div>
         """
-        st.html(card("Counterfactual Sensitivity Verification", del_html))
-
-    # 4. Standard Operational Playbook Expander
-    with st.expander("Operational Mitigation Protocols"):
-        st.markdown("""
-        - **Supplier Disruption**: Activate secondary approved material sourcing; review transit consignment tracker; adjust buffer safety inventory.
-        - **Manufacturing Bottleneck**: Rebalance batch scheduling; verify component availability across alternative production lines.
-        - **Distribution Disruption**: Reroute transit corridors to secondary logistics carriers; consolidate regional warehouse shipments.
-        - **Retailer Stockout**: Reallocate regional inventory to critical demand centers; adjust lead-time order throttling.
-        """)
+        st.html(card("Deletion Test", del_html))

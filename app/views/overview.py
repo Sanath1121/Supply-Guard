@@ -1,7 +1,7 @@
 """SupplyGuard Executive Overview & Operational Architecture.
 
-Presents the executive platform summary, operational readiness checklist,
-enterprise specifications, and decision action protocols.
+Presents the platform summary, readiness checklist, model and data
+specifications, and the severity-tier definitions.
 """
 import os
 import streamlit as st
@@ -33,14 +33,14 @@ def render_overview(status: ArtifactStatus):
     # 1. Executive Platform Scope Card
     summary_html = """
     <p style="margin: 0; font-size: 0.9375rem; line-height: 1.65; color: var(--text-2);">
-        SupplyGuard provides real-time operational foresight across the multi-tier supply chain 
-        (<strong>Supplier &rarr; Manufacturer &rarr; Distributor &rarr; Retailer</strong>).
-        By coupling <strong>Spatial Graph Convolution (GCN)</strong> with <strong>Temporal Recurrent (LSTM)</strong> networks and a residual persistence baseline,
-        it anticipates downstream vulnerability cascades <strong>10 minutes ahead of occurrence</strong>.
-        Every forecast is auditable via <strong>Path-Integrated Gradients</strong>, isolating whether emerging bottlenecks stem from supplier shortages, assembly delays, transit friction, or cost surges.
+        SupplyGuard forecasts the risk index of every echelon of a four-tier supply chain
+        (<strong>Supplier &rarr; Manufacturer &rarr; Distributor &rarr; Retailer</strong>)
+        <strong>10 minutes (5 steps) ahead</strong>, replaying windows from the held-out test period of the Mendeley SCRM dataset.
+        It couples <strong>directed graph convolution (GCN)</strong> with a <strong>shared LSTM per node</strong> and a residual head that starts from the persistence forecast.
+        Each forecast can be explained with <strong>Integrated Gradients</strong>, which shows how sensitive it is to each past input; this is sensitivity, not proof of cause.
     </p>
     """
-    st.html(card("Executive Platform Mission", summary_html))
+    st.html(card("Platform Summary", summary_html))
     st.html("<div style='height: 16px;'></div>")
 
     col1, col2 = st.columns([1, 1], gap="medium")
@@ -67,16 +67,16 @@ def render_overview(status: ArtifactStatus):
 
         pipeline_html = (
             f'<div>'
-            f'{check_row("Telemetry Dataset", has_data, "Verified chronological partitions (647,636 records)")}'
+            f'{check_row("Telemetry Dataset", has_data, "Mendeley SCRM series, chronological 80/10/10 partitions")}'
             f'{check_row("Calibration Scaler", has_scaler, "MinMaxScaler fitted strictly on training partition")}'
             f'{check_row("Model Weights Checkpoints", has_ckpt, f"{len(ckpt_files)} multi-seed models ready in {Config.CKPT_DIR}")}'
-            f'{check_row("Empirical SLA Benchmarks", has_results, "Production accuracy & F1 score validation tables")}'
+            f'{check_row("Benchmark Results", has_results, "5-seed MSE, R², accuracy and macro-F1 tables")}'
             f'</div>'
         )
-        st.html(card("Operational Readiness & Model Health", pipeline_html))
+        st.html(card("Readiness & Model Health", pipeline_html))
 
     with col2:
-        # 3. Enterprise System Specifications
+        # 3. Model and data specifications
         specs_html = f"""
         <table style="width: 100%; border-collapse: collapse; font-size: 0.8125rem; color: var(--text-2);">
             <tr style="border-bottom: 1px solid var(--border);">
@@ -92,7 +92,7 @@ def render_overview(status: ArtifactStatus):
                 <td style="padding: 9px 0; text-align: right;">{" &rarr; ".join(Config.NODE_NAMES)}</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border);">
-                <td style="padding: 9px 0; color: var(--text-3);">Dynamic Feature Vector (F)</td>
+                <td style="padding: 9px 0; color: var(--text-3);">Input Features (F)</td>
                 <td style="padding: 9px 0; text-align: right;" class="mono-val">4 Echelon Risk Indices + Logistics Cost (5 dim)</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border);">
@@ -105,42 +105,50 @@ def render_overview(status: ArtifactStatus):
             </tr>
         </table>
         """
-        st.html(card("Production Architecture Specifications", specs_html))
+        st.html(card("Model & Data Specifications", specs_html))
 
     st.html("<div style='height: 16px;'></div>")
 
-    # 4. Severity Action Protocols
+    # 4. Severity tier definitions (same rule as training/evaluate.py)
     tiers_info = get_tiers()
-    p33 = tiers_info.get("p33", 0.35)
-    p66 = tiers_info.get("p66", 0.65)
-    source_label = "Calibrated Distribution Cutoffs" if tiers_info.get("source") == "train_terciles" else "Standard Baseline Cutoffs"
+    if "node_p33" in tiers_info and "node_p66" in tiers_info:
+        rows = "".join(
+            f'<tr style="border-bottom: 1px solid var(--border);">'
+            f'<td style="padding: 8px 0; color: var(--text-3);">{name}</td>'
+            f'<td style="padding: 8px 0; text-align: right;" class="mono-val">&lt; {lo:.3f}</td>'
+            f'<td style="padding: 8px 0; text-align: right;" class="mono-val">{lo:.3f} – {hi:.3f}</td>'
+            f'<td style="padding: 8px 0; text-align: right;" class="mono-val">&gt; {hi:.3f}</td></tr>'
+            for name, lo, hi in zip(Config.NODE_NAMES, tiers_info["node_p33"], tiers_info["node_p66"])
+        )
+        thresholds_html = f"""
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.8125rem; color: var(--text-2);">
+            <tr style="border-bottom: 1px solid var(--border); color: var(--text-3);">
+                <th style="text-align: left; padding: 6px 0;">Echelon</th>
+                <th style="text-align: right; padding: 6px 0; color: var(--ok);">● Low</th>
+                <th style="text-align: right; padding: 6px 0; color: var(--warn);">▲ Medium</th>
+                <th style="text-align: right; padding: 6px 0; color: var(--bad);">■ High</th>
+            </tr>
+            {rows}
+        </table>
+        """
+        source_label = "Per-echelon terciles of the training partition (scaled risk index)"
+    else:
+        thresholds_html = (
+            f'<div style="font-size: 0.8125rem; color: var(--text-2);">Low &lt; {tiers_info["p33"]:.2f} · '
+            f'Medium {tiers_info["p33"]:.2f} – {tiers_info["p66"]:.2f} · High &gt; {tiers_info["p66"]:.2f}</div>'
+        )
+        source_label = "Provisional cutoffs (training data unavailable)"
 
     guide_html = f"""
     <div style="font-size: 0.875rem; line-height: 1.6; color: var(--text-2);">
         <p style="margin-top: 0;">
-            SupplyGuard standardizes risk across all tiers onto a calibrated scale ($0.00$ to $1.00$). 
-            Operations and dispatch teams follow standardized action protocols mapped to risk severity:
+            Each forecast is placed in a Low, Medium or High tier using that echelon's own thresholds,
+            the same rule used to compute the accuracy and macro-F1 on the Benchmarks page.
         </p>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 14px 0;">
-            <div style="background: var(--surface-2); padding: 14px; border-radius: var(--r-sm); border-left: 3px solid var(--ok);">
-                <strong style="color: var(--ok);">● Low Severity (&lt; {p33:.2f})</strong>
-                <div style="font-size: 0.8125rem; color: var(--text-2); margin-top: 4px;"><strong>Status:</strong> Normal Operations</div>
-                <div style="font-size: 0.75rem; color: var(--text-3); margin-top: 2px;">Standard buffer levels adequate. No dispatch interventions required.</div>
-            </div>
-            <div style="background: var(--surface-2); padding: 14px; border-radius: var(--r-sm); border-left: 3px solid var(--warn);">
-                <strong style="color: var(--warn);">▲ Medium Severity ({p33:.2f} – {p66:.2f})</strong>
-                <div style="font-size: 0.8125rem; color: var(--text-2); margin-top: 4px;"><strong>Status:</strong> Elevated Vulnerability</div>
-                <div style="font-size: 0.75rem; color: var(--text-3); margin-top: 2px;">Emerging transit lag or capacity strain. Alert downstream distribution hubs.</div>
-            </div>
-            <div style="background: var(--surface-2); padding: 14px; border-radius: var(--r-sm); border-left: 3px solid var(--bad);">
-                <strong style="color: var(--bad);">■ High Severity (&gt; {p66:.2f})</strong>
-                <div style="font-size: 0.8125rem; color: var(--text-2); margin-top: 4px;"><strong>Status:</strong> Critical Incident</div>
-                <div style="font-size: 0.75rem; color: var(--text-3); margin-top: 2px;">Imminent disruption. Activate emergency buffer inventory and expedite secondary logistics line.</div>
-            </div>
-        </div>
+        {thresholds_html}
         <div style="font-size: 0.75rem; color: var(--text-3); margin-top: 8px;">
-            <em>Source: {source_label}</em> · Integrated Gradients diagnostics quantify input sensitivity to guide targeted mitigation.
+            <em>Source: {source_label}</em>
         </div>
     </div>
     """
-    st.html(card("Operational Severity Protocols & Action Matrix", guide_html))
+    st.html(card("Severity Tiers", guide_html))

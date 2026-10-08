@@ -1,7 +1,7 @@
 """SupplyGuard Incident Report & Audit Provenance Export View.
 
 Generates complete, reproducible Markdown incident audit reports with
-tamper-evident artifact provenance metadata and scientific disclaimers.
+checkpoint-hash provenance metadata and scientific disclaimers.
 """
 from typing import Dict, Any, List, Optional
 import hashlib
@@ -14,7 +14,7 @@ from src.explainability import FEATURE_NAMES, NODE_NAMES, narrate
 from app.ui.components import card, banner, section_header, provenance_dict, escape
 from app.utils.artifacts import ArtifactStatus, get_tiers, get_scaler, predict_window
 from app.utils.explain_service import compute_explanation
-from app.utils.formatters import compute_tercile_tier
+from app.utils.formatters import compute_tercile_tier, node_tier
 
 
 def get_checkpoint_sha256(path: Optional[str]) -> str:
@@ -70,7 +70,7 @@ def generate_markdown_report(
     if preds is not None and preds.size > 1:
         for i, name in enumerate(Config.NODE_NAMES):
             r = float(preds[i])
-            t = compute_tercile_tier(r, p33, p66)
+            t = node_tier(r, i, tiers)
             echelon_rows.append(f"| {name} | {r:.4f} | {t} |")
     echelon_table = "\n".join(echelon_rows) if echelon_rows else "| Overall TRI | {:.4f} | {} |".format(tri_val, tri_tier)
 
@@ -89,7 +89,7 @@ def generate_markdown_report(
 - **Model Architecture:** `{status.model_name}` (Graph Mode: `{status.graph_mode}`, Seed: `{status.seed}`)
 - **Checkpoint SHA-256:** `{ckpt_hash}` ({status.checkpoint_path or 'No checkpoint found'})
 - **Fitted Scaler:** {'Verified (`scaler.joblib`)' if status.scaler_fitted else 'Missing (Standardized units only)'}
-- **Severity Thresholds:** {prov['tiers_source']} (p33 = {p33:.3f}, p66 = {p66:.3f})
+- **Severity Thresholds:** {prov['tiers_source']} (per echelon; mean index p33 = {p33:.3f}, p66 = {p66:.3f})
 - **Data Source:** {prov['data_source']} (Window #{prov['window_id']}, Timestamp: {prov['timestamp']})
 - **Attribution Mode:** {prov['attribution_mode']}
 - **Scientific Framing:** *{prov['disclaimer']}*
@@ -111,12 +111,6 @@ def generate_markdown_report(
   > {xai_text}
 
 ---
-
-## 4. Standard Response Protocols (Operational Reference)
-The following heuristics represent standard supply chain risk management operational actions:
-1. **Tier Review:** Verify buffer safety margins across the upstream supplier and manufacturing interface.
-2. **Logistics Rerouting:** Prepare secondary carrier transit dispatch for distribution lanes exceeding medium threshold.
-3. **Audit Verification:** Cross-check sensor telemetries against physical freight status manifests.
 
 *Report automatically compiled by SupplyGuard Diagnostic Core.*
 """

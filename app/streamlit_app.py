@@ -111,7 +111,7 @@ def main():
             )
 
         # Hardware & Engine Telemetry
-        device_str = "CUDA (" + torch.cuda.get_device_name(0) + ")" if torch.cuda.is_available() else "CPU (AVX2 Vectorized)"
+        device_str = "CUDA (" + torch.cuda.get_device_name(0) + ")" if torch.cuda.is_available() else "CPU"
         st.html(clean_html(f"""
         <div style="font-size: 0.75rem; color: var(--text-3); padding: 10px 12px; background: rgba(15, 23, 42, 0.8); border-radius: var(--r-sm); border: 1px solid var(--border); margin-top: 10px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -180,7 +180,7 @@ def main():
     p_overview = st.Page(view_overview, title="Executive Overview", url_path="overview", icon=":material/dashboard:", default=True)
     p_monitor = st.Page(view_monitor, title="Risk Monitor", url_path="monitor", icon=":material/analytics:")
     p_why = st.Page(view_why, title="Diagnostic XAI", url_path="why", icon=":material/psychology:")
-    p_benchmarks = st.Page(view_benchmarks, title="Production Benchmarks", url_path="benchmarks", icon=":material/leaderboard:")
+    p_benchmarks = st.Page(view_benchmarks, title="Benchmarks", url_path="benchmarks", icon=":material/leaderboard:")
     p_export = st.Page(view_export, title="Incident Dossier", url_path="export", icon=":material/description:")
 
     # Store p_why in session state for cross-page navigation from Monitor

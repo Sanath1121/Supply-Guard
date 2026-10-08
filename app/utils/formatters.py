@@ -49,6 +49,16 @@ def compute_tercile_tier(value: float, p33: float = 0.35, p66: float = 0.65) -> 
         return "High"
 
 
+def node_tier(value: float, node_idx: int, tiers: Dict[str, Any]) -> str:
+    """Classify one echelon's risk with that echelon's own train terciles (as in training/evaluate.py).
+
+    Falls back to the shared p33/p66 cutoffs when per-node thresholds are unavailable.
+    """
+    if "node_p33" in tiers and "node_p66" in tiers:
+        return compute_tercile_tier(value, tiers["node_p33"][node_idx], tiers["node_p66"][node_idx])
+    return compute_tercile_tier(value, tiers.get("p33", 0.35), tiers.get("p66", 0.65))
+
+
 def get_tier_color(tier: str) -> str:
     """Hex color mapping for UI consistency."""
     mapping = {

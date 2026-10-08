@@ -1,6 +1,6 @@
 """SupplyGuard Production Benchmarks & Model Validation View.
 
-Renders empirical comparison leaderboards, SLA validation scorecards, and classification
+Renders empirical comparison leaderboards, research-question verdicts, and classification
 metrics strictly from outputs/results/ CSV files.
 Displays explicit 'Pending' states when artifacts are not yet generated.
 Zero hardcoded metrics or pre-computed verdicts.
@@ -22,11 +22,24 @@ from app.utils.results_loader import (
 )
 
 
+def _fmt_mean_std(mean: float, std: float, kind: str) -> str:
+    """Format a metric as 'mean ± std'; deterministic baselines (std = NaN) show the mean only."""
+    if kind == "MSE":
+        fmt = lambda v: f"{v:.2e}"
+    elif kind == "pct":
+        fmt = lambda v: f"{v * 100:.1f}%"
+    else:
+        fmt = lambda v: f"{v:.4f}"
+    if std is None or pd.isna(std):
+        return fmt(mean)
+    return f"{fmt(mean)} ± {fmt(std)}"
+
+
 def render_benchmarks():
     """Render the Production Benchmarks and Validation view."""
     section_header(
-        "Model Reliability & Production Validation Benchmarks",
-        "Empirical 5-seed evaluation on untouched test partition. Performance verified against industry baselines."
+        "Model Benchmarks",
+        "5-seed evaluation on the untouched test partition, compared with Naive Persistence, Ridge-AR(10) and a graph-free LSTM."
     )
 
     overall_df = load_overall_metrics()
@@ -34,47 +47,27 @@ def render_benchmarks():
     node_df = load_node_metrics()
     verdicts = evaluate_rq_verdicts(overall_df)
 
-    # 1. Operational SLA & Validation Scorecards
-    st.markdown("#### Production Validation & Reliability Scorecards")
+    # 1. Research-question verdicts (computed from outputs/results/)
+    st.markdown("#### Research Question Verdicts")
     rq_cols = st.columns(4, gap="small")
-
-    bench_meta = {
-        "RQ1": {
-            "title": "Multi-Node Coordinated Early Warning",
-            "desc": "Simultaneous 4-echelon forecasting vs isolated single-tier models."
-        },
-        "RQ2": {
-            "title": "Spatiotemporal Topology Gain",
-            "desc": "Quantifies graph convolution edge over standard graph-free LSTM."
-        },
-        "RQ3": {
-            "title": "+10 Min Early Warning Superiority",
-            "desc": "Forecast accuracy improvement over naive persistence at 10-min horizon."
-        },
-        "RQ4": {
-            "title": "Critical Incident Detection Recall",
-            "desc": "Classification Macro-F1 ensuring zero missed high-severity alarms."
-        }
-    }
 
     rq_keys = ["RQ1", "RQ2", "RQ3", "RQ4"]
     for i, k in enumerate(rq_keys):
         v = verdicts[k]
         state = v["state"]
-        meta = bench_meta[k]
         with rq_cols[i]:
             badge = status_badge(v["status"], state)
             c_html = f"""
             <div>
                 <div style="margin-bottom: 6px;">{badge}</div>
-                <div style="font-size: 0.8125rem; font-weight: 700; color: #FFFFFF; margin-bottom: 4px;">{escape(meta['title'])}</div>
-                <div style="font-size: 0.75rem; color: var(--text-3); min-height: 44px; line-height: 1.4;">{escape(meta['desc'])}</div>
+                <div style="font-size: 0.8125rem; font-weight: 700; color: #FFFFFF; margin-bottom: 4px;">{escape(v['title'].split(': ', 1)[-1])}</div>
+                <div style="font-size: 0.75rem; color: var(--text-3); min-height: 44px; line-height: 1.4;">{escape(v['hypothesis'])}</div>
                 <div style="font-size: 0.75rem; color: var(--text-2); border-top: 1px solid var(--border); padding-top: 5px; margin-top: 6px;">
                     {escape(v['details'])}
                 </div>
             </div>
             """
-            st.html(card(f"SLA Benchmark {i+1}", c_html))
+            st.html(card(f"Research Question {i+1}", c_html))
 
     st.html("<div style='height: 20px;'></div>")
 
@@ -93,11 +86,14 @@ def render_benchmarks():
         # Format friendly enterprise model names
         model_display_map = {
             "st_gcn_lstm_directed": "SupplyGuard ST-GCN-LSTM (Directed)",
+            "st_gcn_lstm_dir": "SupplyGuard ST-GCN-LSTM (Directed)",
             "st_gcn_lstm_symmetric": "SupplyGuard ST-GCN-LSTM (Symmetric)",
-            "lstm": "Ablation Baseline (Standard LSTM)",
-            "paper_overall": "Global Aggregate Baseline",
-            "persistence": "Naive Persistence (t-0)",
-            "ridge_ar": "Ridge Autoregressive (AR-10)"
+            "st_gcn_lstm_sym": "SupplyGuard ST-GCN-LSTM (Symmetric)",
+            "lstm": "Graph-free LSTM",
+            "paper_overall": "Base-Paper Hybrid (re-implemented, mean index only)",
+            "persistence": "Naive Persistence",
+            "ridge_ar": "Ridge-AR(10)",
+            "ar10_ridge": "Ridge-AR(10)"
         }
         if "model" in disp_df.columns:
             disp_df["Model Name"] = disp_df["model"].apply(lambda m: model_display_map.get(m, m))
@@ -105,11 +101,9 @@ def render_benchmarks():
         cols_to_format = ["MSE", "MAE", "RMSE", "R2"]
         for c in cols_to_format:
             if f"{c}_mean" in disp_df.columns and f"{c}_std" in disp_df.columns:
-                disp_df[c] = disp_df.apply(
-                    lambda row: f"{row[f'{c}_mean']:.4f} ± {row[f'{c}_std']:.4f}", axis=1
-                )
+                disp_df[c] = disp_df.apply(lambda row, c=c: _fmt_mean_std(row[f"{c}_mean"], row[f"{c}_std"], c), axis=1)
             elif f"{c}_mean" in disp_df.columns:
-                disp_df[c] = disp_df[f"{c}_mean"].apply(lambda v: f"{v:.4f}")
+                disp_df[c] = disp_df[f"{c}_mean"].apply(lambda v, c=c: _fmt_mean_std(v, float("nan"), c))
 
         first_col = "Model Name" if "Model Name" in disp_df.columns else "model"
         display_cols = [first_col] + [c for c in cols_to_format if c in disp_df.columns]
@@ -133,12 +127,12 @@ def render_benchmarks():
                 y=overall_df["MSE_mean"],
                 error_y=error_y_dict,
                 marker=dict(color="#3B82F6"),
-                hovertemplate="<b>%{x}</b><br>MSE: %{y:.4f}<extra></extra>"
+                hovertemplate="<b>%{x}</b><br>MSE: %{y:.2e}<extra></extra>"
             ))
             fig_bar.update_layout(
-                title="Model Test MSE (Lower is Better — 5 Seeds with Standard Error)",
-                xaxis_title="Evaluated AI Model Architecture",
-                yaxis_title="Mean Squared Error (Normalized)",
+                title="Model Test MSE (Lower is Better — mean ± std over 5 seeds)",
+                xaxis_title="Model",
+                yaxis_title="Mean Squared Error (scaled units)",
                 margin=dict(l=15, r=15, t=35, b=25)
             )
             apply_theme(fig_bar, height=320)
@@ -157,17 +151,22 @@ def render_benchmarks():
         
         if "accuracy_mean" in sev_display.columns and "accuracy_std" in sev_display.columns:
             sev_display["Accuracy"] = sev_display.apply(
-                lambda r: f"{r['accuracy_mean']:.3f} ± {r['accuracy_std']:.3f}", axis=1
+                lambda r: _fmt_mean_std(r["accuracy_mean"], r["accuracy_std"], "pct"), axis=1
             )
         if "macro_F1_mean" in sev_display.columns and "macro_F1_std" in sev_display.columns:
-            sev_display["Macro-F1 (Crisis Recall)"] = sev_display.apply(
-                lambda r: f"{r['macro_F1_mean']:.3f} ± {r['macro_F1_std']:.3f}", axis=1
+            sev_display["Macro-F1"] = sev_display.apply(
+                lambda r: _fmt_mean_std(r["macro_F1_mean"], r["macro_F1_std"], "pct"), axis=1
             )
 
         first_s_col = "Model Name" if "Model Name" in sev_display.columns else "model"
-        show_sev_cols = [first_s_col] + [c for c in ["Accuracy", "Macro-F1 (Crisis Recall)"] if c in sev_display.columns]
+        show_sev_cols = [first_s_col] + [c for c in ["Accuracy", "Macro-F1"] if c in sev_display.columns]
         st.dataframe(
             sev_display[show_sev_cols],
             use_container_width=True,
             hide_index=True
+        )
+        best = sev_display.loc[sev_display["macro_F1_mean"].idxmax()]
+        st.caption(
+            f"Tiers use each echelon's training-set terciles. Highest macro-F1: "
+            f"{escape(str(best.get(first_s_col, best['model'])))} ({best['macro_F1_mean'] * 100:.1f}%)."
         )

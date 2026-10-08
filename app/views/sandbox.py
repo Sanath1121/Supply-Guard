@@ -13,7 +13,7 @@ from src.config import Config
 from app.ui.components import card, banner, section_header, status_badge, escape
 from app.ui.canvas import render_topology_svg
 from app.utils.artifacts import ArtifactStatus, get_tiers, get_scaler, predict_window
-from app.utils.formatters import compute_tercile_tier
+from app.utils.formatters import compute_tercile_tier, node_tier
 from app.utils.explain_service import compute_all_edge_shares
 
 
@@ -96,7 +96,7 @@ def render_sandbox(
                 for i, n in enumerate(Config.NODE_NAMES):
                     with cols[i]:
                         r = float(preds[i])
-                        t = compute_tercile_tier(r, p33, p66)
+                        t = node_tier(r, i, tiers)
                         st.html(card(n, f"<div style='font-size: 1.25rem;' class='mono-val'>{r:.3f}</div><div style='margin-top:4px;'>{status_badge(t, t)}</div>", tone=t))
 
     with tab_upload:
@@ -128,6 +128,12 @@ def render_sandbox(
                         if st.button("Run Inference on Custom CSV", key="run_upload_sim_btn"):
                             tail_df = df.tail(Config.SEQ_LEN)
                             seq_data = tail_df[req_cols].values.astype(np.float32)
+                            # The model works in scaled units; raw SCRM values (risk ~1-3, cost ~10-300)
+                            # are mapped with the scaler fitted on the training partition.
+                            scaler, scaler_fitted = get_scaler()
+                            if scaler_fitted and (seq_data.min() < 0.0 or seq_data.max() > 1.0):
+                                seq_data = scaler.transform(seq_data).astype(np.float32)
+                                st.caption("Values outside 0–1 detected: input scaled with the training-partition MinMax scaler.")
                             
                             preds = np.atleast_1d(predict_window(model, seq_data))
                             st.markdown("#### Forecasted Custom Scenario Impacts")
@@ -141,7 +147,7 @@ def render_sandbox(
                                 for i, n in enumerate(Config.NODE_NAMES):
                                     with cols[i]:
                                         r = float(preds[i])
-                                        t = compute_tercile_tier(r, p33, p66)
+                                        t = node_tier(r, i, tiers)
                                         st.html(card(n, f"<div style='font-size: 1.25rem;' class='mono-val'>{r:.3f}</div><div style='margin-top:4px;'>{status_badge(t, t)}</div>", tone=t))
 
                             # Spatiotemporal Risk Cascade Network Topology
