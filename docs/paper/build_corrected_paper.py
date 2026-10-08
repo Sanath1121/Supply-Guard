@@ -101,6 +101,7 @@ rel_ld = d_ld / ov.loc["lstm"].MSE_mean * 100
 
 # ------------------------------------------------------------------ text edits keyed by 1-based paragraph number
 T = {}
+T[17] = ["Under the guidance of Mrs. N. Chandana, Assistant Professor, Dept. of Computer Science and Engineering, Anurag University"]
 T[19] = ["Abstract—",
          "Multi-echelon supply networks can transmit an upstream disruption to downstream tiers, yet many risk-forecasting "
          "models predict a single aggregated index and are evaluated at very short horizons where persistence is difficult "
@@ -448,7 +449,7 @@ T[312] = ["• External Telemetry: ", "Add external signals such as weather or p
 T[313] = ["• Controlled Ablation and Hybrid Alerts: ",
           "Run an identity-adjacency control with the same architecture, and test a hybrid that uses persistence in calm "
           "periods and the learned correction on detected shocks."]
-T[315] = ["The authors thank their project supervisor, Ms. Chandana, Assistant Professor, Department of Computer Science and "
+T[315] = ["The authors thank their project supervisor, Mrs. N. Chandana, Assistant Professor, Department of Computer Science and "
           "Engineering, Anurag University, Hyderabad, for her guidance throughout this work, and the authors of the Mendeley "
           "time-series dataset [3] for making it publicly available."]
 T[317] = ['[1] D. Ivanov, A. Dolgui, and B. Sokolov, "The impact of digital technology and Industry 4.0 on the ripple effect and '
