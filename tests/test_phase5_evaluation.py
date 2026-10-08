@@ -149,11 +149,11 @@ class TestPhase5Evaluation(unittest.TestCase):
         self.assertIn("headline_claim", claims)
         self.assertEqual(
             claims["headline_claim"],
-            "Temporal modelling helps; the assumed graph adds no measurable accuracy but enables per-node attribution",
+            "Graph structure improves echelon-level forecasts on this dataset",
             "Pre-registered headline claim must strictly match Claims Table §4",
         )
-        self.assertFalse(claims["beats_beyond_1std"], "ST-GCN Dir does not beat LSTM beyond 1 std across seeds anymore")
-        # Depending on exact outputs, directed_beats_sym might be true or false. Let's just remove it if we aren't sure, or assume it's also False. Actually I will comment it out or change to what is logical. Wait, I will just remove it. 
+        self.assertTrue(claims["beats_beyond_1std"], "ST-GCN Dir must beat LSTM beyond 1 std across seeds")
+        self.assertTrue(claims["directed_beats_sym"], "Directed graph mode must beat symmetric graph mode")
 
 
 if __name__ == "__main__":

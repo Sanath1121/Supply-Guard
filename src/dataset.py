@@ -50,37 +50,39 @@ def load_clean_frame(cfg) -> pd.DataFrame:
     df = df.dropna(subset=[cfg.DATE_COL])
 
     df = (df.sort_values(cfg.DATE_COL, kind="stable")
-            .drop_duplicates(subset=[cfg.DATE_COL], keep="first"))
-            
-    df = df.set_index(cfg.DATE_COL).resample("2min").asfreq()
-    
-    n_dup_dropped = (n_raw - n_bad_ts) - len(df[~df[cfg.FEATURE_COLS].isna().all(axis=1)])
+            .drop_duplicates(subset=[cfg.DATE_COL], keep="first")
+            .reset_index(drop=True))
+    n_dup_dropped = (n_raw - n_bad_ts) - len(df)
+
+    gap_max_min = getattr(cfg, "GAP_MAX_MIN", 6.0)
+    time_diffs = df[cfg.DATE_COL].diff()
+    is_gap = time_diffs > pd.Timedelta(minutes=gap_max_min)
+    df["gap_seg"] = is_gap.cumsum()
 
     ffill_limit = getattr(cfg, "FFILL_LIMIT", 5)
-    df[cfg.FEATURE_COLS] = df[cfg.FEATURE_COLS].ffill(limit=ffill_limit)
+    df[cfg.FEATURE_COLS] = df.groupby("gap_seg")[cfg.FEATURE_COLS].ffill(limit=ffill_limit)
 
     has_nan = df[cfg.FEATURE_COLS].isna().any(axis=1)
     n_nan_dropped = int(has_nan.sum())
     clean_df = df[~has_nan].copy()
 
     min_seg_len = getattr(cfg, "SEQ_LEN", 10) + getattr(cfg, "HORIZON", 5)
-    gap_max_min = getattr(cfg, "GAP_MAX_MIN", 6.0)
-
     if len(clean_df) > 0:
-        time_diffs_clean = clean_df.index.to_series().diff()
-        is_new_seg = time_diffs_clean > pd.Timedelta(minutes=gap_max_min)
+        clean_indices = clean_df.index.to_series()
+        time_diffs_clean = clean_df[cfg.DATE_COL].diff()
+        is_new_seg = (clean_indices.diff() != 1) | (time_diffs_clean > pd.Timedelta(minutes=gap_max_min))
         is_new_seg.iloc[0] = False
         clean_df["seg_id"] = is_new_seg.cumsum()
 
         seg_counts = clean_df.groupby("seg_id")["seg_id"].transform("count")
         short_mask = seg_counts < min_seg_len
         n_short_seg_rows = int(short_mask.sum())
-        valid_df = clean_df[~short_mask].copy().reset_index()
+        valid_df = clean_df[~short_mask].copy().reset_index(drop=True)
         if len(valid_df) > 0:
             valid_df["seg_id"] = pd.factorize(valid_df["seg_id"])[0]
     else:
         n_short_seg_rows = 0
-        valid_df = clean_df.copy().reset_index()
+        valid_df = clean_df.copy().reset_index(drop=True)
 
     n_clean_retained = len(valid_df)
     row_loss_stats = {

@@ -93,9 +93,14 @@ class AdversarialPhase2DatasetTests(unittest.TestCase):
         clean_df = load_clean_frame(cfg)
         
         segments = [group for _, group in clean_df.groupby("seg_id")]
-        self.assertEqual(len(segments), 1)
-        self.assertEqual(len(segments[0]), 47)
-        self.assertEqual(clean_df["seg_id"].nunique(), 1)
+        self.assertEqual(len(segments), 3, f"Expected 3 segments across boundary tests, got {len(segments)}")
+        self.assertEqual(len(segments[0]), 40, f"Block A+B should merge into 40 rows (dt=6.0 min), got {len(segments[0])}")
+        self.assertEqual(len(segments[1]), 20, f"Block C should be 20 rows, got {len(segments[1])}")
+        self.assertEqual(len(segments[2]), 40, f"Block D+E should merge into 40 rows (dt=5m59s), got {len(segments[2])}")
+        
+        self.assertEqual(clean_df["seg_id"].nunique(), 3, "load_clean_frame must produce 3 segments")
+        counts = clean_df.groupby("seg_id")["seg_id"].count().values
+        self.assertEqual(list(counts), [40, 20, 40], "Segment row counts must be [40, 20, 40]")
 
 
     def test_02_multiple_consecutive_gaps_and_pathological_stream(self):
@@ -125,9 +130,14 @@ class AdversarialPhase2DatasetTests(unittest.TestCase):
         clean_df = load_clean_frame(cfg)
         
         stats = clean_df.attrs["row_loss"]
-        self.assertEqual(stats["n_short_seg_rows_dropped"], 0)
-        self.assertEqual(stats["n_clean_rows_retained"], 76)
-        self.assertEqual(clean_df["seg_id"].nunique(), 2)
+        self.assertEqual(stats["n_short_seg_rows_dropped"], 10, "All 10 sparse rows must be dropped as short segments")
+        self.assertEqual(stats["n_clean_rows_retained"], 25, "Dense 25 rows must be retained")
+        self.assertEqual(clean_df["seg_id"].nunique(), 1, "Exactly 1 valid segment retained")
+        
+        # Test window generation
+        tr, va, te, _, _ = build_datasets(cfg, save_scaler=False)
+        total_windows = len(tr) + len(va) + len(te)
+        self.assertEqual(total_windows, 11, "25 rows with L=10, H=5 must produce exactly 11 windows")
 
     def test_03_segment_lengths_14_vs_15_vs_16(self):
         """Stress Test 3: Segment lengths of exactly 14 rows (< L+H) vs 15 rows (== L+H) vs 16 rows.
@@ -163,8 +173,22 @@ class AdversarialPhase2DatasetTests(unittest.TestCase):
         cfg = Config()
         cfg.RAW_DATA_PATH = csv_path
         clean_df = load_clean_frame(cfg)
-        self.assertEqual(clean_df.attrs["row_loss"]["n_short_seg_rows_dropped"], 0)
-        self.assertEqual(clean_df.attrs["row_loss"]["n_clean_rows_retained"], 55)
+        self.assertEqual(clean_df.attrs["row_loss"]["n_short_seg_rows_dropped"], 14, "14 rows dropped")
+        self.assertEqual(clean_df.attrs["row_loss"]["n_clean_rows_retained"], 31, "15 + 16 = 31 rows retained")
+
+        segments = [group for _, group in clean_df.groupby("seg_id")]
+        self.assertEqual(len(segments), 2, "Seg 1 (14 rows) dropped; Seg 2 (15) and Seg 3 (16) retained")
+        self.assertEqual(len(segments[0]), 15)
+        self.assertEqual(len(segments[1]), 16)
+
+        tr, va, te, scaler, _ = build_datasets(cfg, save_scaler=False)
+        total_windows = len(tr) + len(va) + len(te)
+        self.assertEqual(total_windows, 3, "Total windows must be 1 + 2 = 3")
+
+        # Inspect the window from the 15-row segment
+        seg2_vals = scaler.transform(segments[0][["RI_Supplier1", "RI_Manufacturer1", "RI_Distributor1", "RI_Retailer1", "Total_Cost"]].values)
+        self.assertTrue(np.allclose(tr.sequences[0].numpy(), seg2_vals[:10], atol=1e-5), "Window 0 sequence must equal first 10 rows")
+        self.assertTrue(np.allclose(tr.node_targets[0].numpy(), seg2_vals[14, :4], atol=1e-5), "Window 0 target must equal row 14 (t+5)")
 
 
     def test_04_sliding_window_gap_spanning_invariant(self):
@@ -394,9 +418,9 @@ class AdversarialPhase2DatasetTests(unittest.TestCase):
             + stats["n_short_seg_rows_dropped"]
             + stats["n_clean_rows_retained"]
         )
-        self.assertNotEqual(
+        self.assertEqual(
             sum_components, stats["n_raw"],
-            "Row loss conservation is correctly violated by resample"
+            f"Row loss conservation violated: sum={sum_components} != raw={stats['n_raw']}"
         )
 
     def test_08_cross_partition_context_borrowing_within_same_segment(self):
@@ -477,8 +501,8 @@ class AdversarialPhase2DatasetTests(unittest.TestCase):
         # So rows 0..14 is 15 rows! 15 >= 15 -> RETAINED!
         # Row 15 dropped.
         # Rows 16..19 (4 rows) < 15 -> DROPPED!
-        self.assertEqual(stats["n_short_seg_rows_dropped"], 0)
-        self.assertEqual(stats["n_clean_rows_retained"], 19)
+        self.assertEqual(stats["n_short_seg_rows_dropped"], 4, "Rows 16..19 dropped as short segment")
+        self.assertEqual(stats["n_clean_rows_retained"], 15, "Subsegment 0..14 has length 15 and is retained")
 
     def test_10_real_scrm_dataset_verification(self):
         """Stress Test 10: Real SCRM 650k dataset full verification.
@@ -524,9 +548,9 @@ class AdversarialPhase2DatasetTests(unittest.TestCase):
             + row_loss["n_short_seg_rows_dropped"]
             + row_loss["n_clean_rows_retained"]
         )
-        self.assertNotEqual(sum_rows, row_loss["n_raw"])
+        self.assertEqual(sum_rows, row_loss["n_raw"], "Real dataset conservation accounting mismatch")
         self.assertEqual(row_loss["n_raw"], 649999)
-        self.assertEqual(row_loss["n_clean_rows_retained"], 11934)
+        self.assertEqual(row_loss["n_clean_rows_retained"], 592599)
 
 
 if __name__ == "__main__":

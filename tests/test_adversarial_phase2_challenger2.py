@@ -254,7 +254,7 @@ class Challenger2AdversarialTests(unittest.TestCase):
         # Segment A is seg_id 0 (50 rows, row indices 0..49)
         # Segment B is seg_id 1 (70 rows, row indices 50..119)
         self.assertEqual(clean_df["seg_id"].iloc[49], 0)
-        self.assertEqual(clean_df["seg_id"].iloc[50], 0)
+        self.assertEqual(clean_df["seg_id"].iloc[50], 1)
 
         # Find val windows that borrow context from train
         borrowing_windows_found = 0
@@ -277,12 +277,13 @@ class Challenger2AdversarialTests(unittest.TestCase):
 
             # STRICT INVARIANT: All context rows must belong to identical segment as target
             self.assertEqual(len(ctx_segs), 1, f"Val sample {i} has context rows spanning multiple segments: {ctx_segs}")
-            self.assertEqual(ctx_segs[0], tgt_seg)
+            self.assertEqual(ctx_segs[0], tgt_seg, f"Val sample {i} context seg {ctx_segs[0]} != target seg {tgt_seg}")
 
             # Check if any context row had global row index < n_tr (borrowed from train)
             ctx_indices = ctx_rows.index.values
             if np.any(ctx_indices < n_tr):
                 borrowing_windows_found += 1
+                # Verify that despite being < n_tr, its seg_id is strictly seg_id 1 (Segment B)
                 self.assertEqual(tgt_seg, 1)
                 # Verify no context step came from Segment A (indices 0..49)
                 self.assertTrue(np.all(ctx_indices >= 50), "Context row illegally borrowed from before the 24-hr gap!")
@@ -395,21 +396,29 @@ class Challenger2AdversarialTests(unittest.TestCase):
         # 4. Verify Case D (6-row null):
         # Row 96 must have been dropped!
         r96_match = clean_df[clean_df[cfg.DATE_COL] == pd.Timestamp(df.loc[96, "Timestamp"])]
-        self.assertEqual(len(r96_match), 0)
+        self.assertEqual(len(r96_match), 0, "6th row of null run was not dropped!")
+
+        # Rows 91..95 were filled with 0.7777
         r95_match = clean_df[clean_df[cfg.DATE_COL] == pd.Timestamp(df.loc[95, "Timestamp"])]
         self.assertEqual(len(r95_match), 1)
+        self.assertAlmostEqual(r95_match["RI_Distributor1"].values[0], 0.7777, places=4)
+
+        # And row 97 must belong to a NEW segment!
         r97_match = clean_df[clean_df[cfg.DATE_COL] == pd.Timestamp(df.loc[97, "Timestamp"])]
         self.assertEqual(len(r97_match), 1)
-        self.assertEqual(
-            r95_match["seg_id"].values[0], r97_match["seg_id"].values[0]
+        self.assertAlmostEqual(r97_match["RI_Distributor1"].values[0], 0.8888, places=4)
+        self.assertNotEqual(
+            r95_match["seg_id"].values[0], r97_match["seg_id"].values[0],
+            "Segment was not split after 6-row null run!"
         )
 
         # 5. Verify Case E (10-row null):
         # Rows 145..149 must have been dropped
         for r in range(145, 150):
             r_match = clean_df[clean_df[cfg.DATE_COL] == pd.Timestamp(df.loc[r, "Timestamp"])]
-            self.assertEqual(len(r_match), 0)
+            self.assertEqual(len(r_match), 0, f"Unfillable null row {r} was not dropped!")
 
+        # Row 150 must belong to a different segment from row 144
         r144 = clean_df[clean_df[cfg.DATE_COL] == pd.Timestamp(df.loc[144, "Timestamp"])]
         r150 = clean_df[clean_df[cfg.DATE_COL] == pd.Timestamp(df.loc[150, "Timestamp"])]
         self.assertNotEqual(r144["seg_id"].values[0], r150["seg_id"].values[0])
@@ -456,9 +465,12 @@ class Challenger2AdversarialTests(unittest.TestCase):
             + loss["n_short_seg_rows_dropped"]
             + loss["n_clean_rows_retained"]
         )
-        self.assertNotEqual(total_accounted, loss["n_raw"])
+        self.assertEqual(total_accounted, loss["n_raw"])
         self.assertEqual(loss["n_raw"], 649999)
-        self.assertEqual(loss["n_clean_rows_retained"], 11934)
+        self.assertEqual(loss["n_duplicates_dropped"], 2363)
+        self.assertEqual(loss["n_nans_dropped"], 53960)
+        self.assertEqual(loss["n_short_seg_rows_dropped"], 1077)
+        self.assertEqual(loss["n_clean_rows_retained"], 592599)
 
         # 2. Strict Partition Target Ordering
         self.assertLess(tr.timestamps.max(), va.timestamps.min())
